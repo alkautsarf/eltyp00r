@@ -1,0 +1,188 @@
+import { useState, useEffect } from "react";
+import { theme } from "../theme";
+import { getAggregateStats, getPersonalBests, getWpmTrend, getPerKeyAccuracy } from "../lib/db";
+import { getKBContext } from "../lib/kb";
+import { getNarrative } from "../lib/ai";
+import type { KeyAccuracy } from "../types";
+
+export function ProfileScreen() {
+  const [stats, setStats] = useState<{
+    avgWpm: number;
+    avgAccuracy: number;
+    totalSessions: number;
+    totalTime: number;
+  } | null>(null);
+  const [bests, setBests] = useState<{ bestWpm: number; bestAccuracy: number } | null>(null);
+  const [wpmTrend, setWpmTrend] = useState<number[]>([]);
+  const [keyAccuracies, setKeyAccuracies] = useState<KeyAccuracy[]>([]);
+  const [narrative, setNarrative] = useState<string | null>(null);
+
+  useEffect(() => {
+    const s = getAggregateStats();
+    setStats(s);
+    setBests(getPersonalBests());
+    setWpmTrend(getWpmTrend());
+    setKeyAccuracies(getPerKeyAccuracy());
+
+    if (s.totalSessions >= 3) {
+      const kbContext = getKBContext();
+      getNarrative(s, kbContext).then((text) => {
+        if (text) setNarrative(text);
+      });
+    }
+  }, []);
+
+  if (!stats || !bests) {
+    return (
+      <box style={{ flexDirection: "column", padding: 2 }}>
+        <text fg={theme.fgFaint}>Loading...</text>
+      </box>
+    );
+  }
+
+  const totalMins = Math.floor(stats.totalTime / 60000);
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+  return (
+    <box style={{ flexDirection: "column", width: "100%", height: "100%", justifyContent: "center", alignItems: "center" }}>
+      <box style={{ flexDirection: "column", alignItems: "center" }}>
+        {/* Title */}
+        <text fg={theme.fg}>your typing dna</text>
+        <text />
+
+        {/* Stats + Bests row */}
+        <box style={{ flexDirection: "row", gap: 3 }}>
+          <box style={{ flexDirection: "column" }}>
+            <text fg={theme.fgFaint}>AVG WPM</text>
+            <text>
+              <span fg={theme.green}>{stats.avgWpm}</span>
+              <span fg={theme.fgFaint}> wpm</span>
+            </text>
+          </box>
+          <box style={{ flexDirection: "column" }}>
+            <text fg={theme.fgFaint}>ACCURACY</text>
+            <text>
+              <span fg={theme.cyan}>{stats.avgAccuracy}</span>
+              <span fg={theme.fgFaint}>%</span>
+            </text>
+          </box>
+          <box style={{ flexDirection: "column" }}>
+            <text fg={theme.fgFaint}>BEST WPM</text>
+            <text>
+              <span fg={theme.yellow}>{bests.bestWpm}</span>
+              <span fg={theme.fgFaint}> wpm</span>
+            </text>
+          </box>
+          <box style={{ flexDirection: "column" }}>
+            <text fg={theme.fgFaint}>BEST ACC</text>
+            <text>
+              <span fg={theme.yellow}>{bests.bestAccuracy}</span>
+              <span fg={theme.fgFaint}>%</span>
+            </text>
+          </box>
+          <box style={{ flexDirection: "column" }}>
+            <text fg={theme.fgFaint}>SESSIONS</text>
+            <text fg={theme.fg}>{stats.totalSessions}</text>
+          </box>
+          <box style={{ flexDirection: "column" }}>
+            <text fg={theme.fgFaint}>TIME</text>
+            <text fg={theme.fg}>{timeStr}</text>
+          </box>
+        </box>
+
+        {/* WPM Trend */}
+        {wpmTrend.length > 0 && (
+          <box style={{ flexDirection: "column", paddingTop: 1 }}>
+            <text fg={theme.fgFaint}>WPM TREND</text>
+            <text>
+              <span fg={theme.green}>{sparkline(wpmTrend)}</span>
+              <span fg={theme.fgFaint}>
+                {" "}
+                {wpmTrend[wpmTrend.length - 1]} wpm
+              </span>
+            </text>
+          </box>
+        )}
+
+        {/* Per-key accuracy — compact grid */}
+        {keyAccuracies.length > 0 && (
+          <box style={{ flexDirection: "column", paddingTop: 1 }}>
+            <text fg={theme.fgFaint}>PER-KEY ACCURACY</text>
+            <KeyGrid keyAccuracies={keyAccuracies} />
+          </box>
+        )}
+
+        {/* AI Coach */}
+        {narrative && (
+          <box
+            style={{ flexDirection: "column", paddingLeft: 1, paddingRight: 1, marginTop: 1 }}
+            border
+            borderColor={theme.border}
+          >
+            <text fg={theme.fgFaint}>AI COACH</text>
+            <text fg={theme.blue}>{narrative}</text>
+          </box>
+        )}
+
+        {stats.totalSessions === 0 && (
+          <box style={{ paddingTop: 1 }}>
+            <text fg={theme.fgFaint}>No sessions yet. Complete a round to see your stats.</text>
+          </box>
+        )}
+      </box>
+    </box>
+  );
+}
+
+function sparkline(values: number[]): string {
+  if (values.length === 0) return "";
+  const blocks = ["\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  return values.map((v) => blocks[Math.min(7, Math.round(((v - min) / range) * 7))]).join("");
+}
+
+function KeyGrid({ keyAccuracies }: { keyAccuracies: KeyAccuracy[] }) {
+  const keyMap = new Map(keyAccuracies.map((ka) => [ka.key, ka]));
+  const letters = "abcdefghijklmnopqrstuvwxyz".split("");
+  const cols = 9;
+  const rows: string[][] = [];
+
+  for (let i = 0; i < letters.length; i += cols) {
+    rows.push(letters.slice(i, i + cols));
+  }
+
+  return (
+    <box style={{ flexDirection: "column", gap: 0 }}>
+      {rows.map((row, rowIdx) => (
+        <text key={rowIdx}>
+          {row.map((letter) => {
+            const ka = keyMap.get(letter);
+            if (!ka) {
+              return (
+                <span key={letter} fg={theme.fgDim}>
+                  {letter} --
+                </span>
+              );
+            }
+            const color =
+              ka.accuracy >= 90
+                ? theme.green
+                : ka.accuracy >= 75
+                  ? theme.yellow
+                  : theme.red;
+            const pct = ka.accuracy.toString().padStart(2, " ");
+            return (
+              <span key={letter} fg={color}>
+                {letter} {pct}% {" "}
+              </span>
+            );
+          })}
+        </text>
+      ))}
+    </box>
+  );
+}

@@ -1,0 +1,55 @@
+import { db } from "./db";
+
+function kbGet(category: string, key: string): any | null {
+  const row = db
+    .query("SELECT value FROM kb WHERE category = ? AND key = ?")
+    .get(category, key) as { value: string } | null;
+  return row ? JSON.parse(row.value) : null;
+}
+
+function kbSet(category: string, key: string, value: any): void {
+  const id = crypto.randomUUID();
+  const json = JSON.stringify(value);
+  db.run(
+    `INSERT INTO kb (id, category, key, value, updated_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(category, key) DO UPDATE SET
+       value = excluded.value,
+       updated_at = datetime('now')`,
+    [id, category, key, json]
+  );
+}
+
+function kbMergeAverage(category: string, key: string, newValue: number, weight: number = 1): void {
+  const existing = kbGet(category, key);
+  if (existing && typeof existing === "object" && "avg" in existing) {
+    const newCount = existing.count + weight;
+    const newAvg = (existing.avg * existing.count + newValue * weight) / newCount;
+    kbSet(category, key, { avg: Math.round(newAvg * 10) / 10, count: newCount, last: newValue });
+  } else {
+    kbSet(category, key, { avg: newValue, count: weight, last: newValue });
+  }
+}
+
+export function getKBContext(): string {
+  const rows = db
+    .query("SELECT category, key, value FROM kb ORDER BY category, key")
+    .all() as Array<{ category: string; key: string; value: string }>;
+  if (rows.length === 0) return "";
+
+  return rows.map((r) => `[${r.category}] ${r.key}: ${r.value}`).join("\n");
+}
+
+export function updateKBFromRound(result: {
+  wpm: number;
+  accuracy: number;
+  problemKeys: string[];
+  keyAccuracies: Array<{ key: string; accuracy: number }>;
+}): void {
+  kbMergeAverage("typing_speed", "wpm", result.wpm);
+  kbMergeAverage("typing_speed", "accuracy", result.accuracy);
+  kbSet("key_accuracy", "per_key", result.keyAccuracies);
+  if (result.problemKeys.length > 0) {
+    kbSet("patterns", "problem_keys", result.problemKeys);
+  }
+}
