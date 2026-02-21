@@ -22,11 +22,11 @@ export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, is
         flexDirection: "column",
         width: "100%",
         height: "100%",
-        paddingLeft: 4,
-        paddingRight: 4,
-        paddingTop: 2,
+        justifyContent: "center",
+        alignItems: "center",
       }}
     >
+      <box style={{ flexDirection: "column", alignItems: "center" }}>
       {/* Header */}
       <box style={{ flexDirection: "column", alignItems: "center", gap: 0 }}>
         <text fg={theme.fgFaint}>ROUND COMPLETE</text>
@@ -112,10 +112,8 @@ export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, is
         </box>
       )}
 
-      {/* Spacer */}
-      <box style={{ flexGrow: 1 }} />
-
       {/* Actions */}
+      <text />
       <box style={{ flexDirection: "row", gap: 3, justifyContent: "center" }}>
         <text>
           <span fg={theme.yellow}>[n]</span>
@@ -129,6 +127,7 @@ export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, is
           <span fg={theme.yellow}>[p]</span>
           <span fg={theme.fgFaint}> profile</span>
         </text>
+      </box>
       </box>
     </box>
   );
