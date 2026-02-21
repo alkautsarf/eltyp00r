@@ -1,44 +1,16 @@
-import { useState, useEffect } from "react";
 import { theme } from "../theme";
 import { getAggregateStats, getPersonalBests, getWpmTrend, getPerKeyAccuracy } from "../lib/db";
-import { getKBContext } from "../lib/kb";
-import { getNarrative } from "../lib/ai";
 import type { KeyAccuracy } from "../types";
 
-export function ProfileScreen() {
-  const [stats, setStats] = useState<{
-    avgWpm: number;
-    avgAccuracy: number;
-    totalSessions: number;
-    totalTime: number;
-  } | null>(null);
-  const [bests, setBests] = useState<{ bestWpm: number; bestAccuracy: number } | null>(null);
-  const [wpmTrend, setWpmTrend] = useState<number[]>([]);
-  const [keyAccuracies, setKeyAccuracies] = useState<KeyAccuracy[]>([]);
-  const [narrative, setNarrative] = useState<string | null>(null);
+interface ProfileScreenProps {
+  narrative: string | null;
+}
 
-  useEffect(() => {
-    const s = getAggregateStats();
-    setStats(s);
-    setBests(getPersonalBests());
-    setWpmTrend(getWpmTrend());
-    setKeyAccuracies(getPerKeyAccuracy());
-
-    if (s.totalSessions >= 3) {
-      const kbContext = getKBContext();
-      getNarrative(s, kbContext).then((text) => {
-        if (text) setNarrative(text);
-      });
-    }
-  }, []);
-
-  if (!stats || !bests) {
-    return (
-      <box style={{ flexDirection: "column", padding: 2 }}>
-        <text fg={theme.fgFaint}>Loading...</text>
-      </box>
-    );
-  }
+export function ProfileScreen({ narrative }: ProfileScreenProps) {
+  const stats = getAggregateStats();
+  const bests = getPersonalBests();
+  const wpmTrend = getWpmTrend();
+  const keyAccuracies = getPerKeyAccuracy();
 
   const totalMins = Math.floor(stats.totalTime / 60000);
   const hours = Math.floor(totalMins / 60);
@@ -55,39 +27,39 @@ export function ProfileScreen() {
         {/* Stats + Bests row */}
         <box style={{ flexDirection: "row", gap: 3 }}>
           <box style={{ flexDirection: "column" }}>
-            <text fg={theme.fgFaint}>AVG WPM</text>
+            <text fg={theme.fgFaint}>Avg Wpm</text>
             <text>
               <span fg={theme.green}>{stats.avgWpm}</span>
               <span fg={theme.fgFaint}> wpm</span>
             </text>
           </box>
           <box style={{ flexDirection: "column" }}>
-            <text fg={theme.fgFaint}>ACCURACY</text>
+            <text fg={theme.fgFaint}>Accuracy</text>
             <text>
               <span fg={theme.cyan}>{stats.avgAccuracy}</span>
               <span fg={theme.fgFaint}>%</span>
             </text>
           </box>
           <box style={{ flexDirection: "column" }}>
-            <text fg={theme.fgFaint}>BEST WPM</text>
+            <text fg={theme.fgFaint}>Best Wpm</text>
             <text>
               <span fg={theme.yellow}>{bests.bestWpm}</span>
               <span fg={theme.fgFaint}> wpm</span>
             </text>
           </box>
           <box style={{ flexDirection: "column" }}>
-            <text fg={theme.fgFaint}>BEST ACC</text>
+            <text fg={theme.fgFaint}>Best Acc</text>
             <text>
               <span fg={theme.yellow}>{bests.bestAccuracy}</span>
               <span fg={theme.fgFaint}>%</span>
             </text>
           </box>
           <box style={{ flexDirection: "column" }}>
-            <text fg={theme.fgFaint}>SESSIONS</text>
+            <text fg={theme.fgFaint}>Sessions</text>
             <text fg={theme.fg}>{stats.totalSessions}</text>
           </box>
           <box style={{ flexDirection: "column" }}>
-            <text fg={theme.fgFaint}>TIME</text>
+            <text fg={theme.fgFaint}>Time</text>
             <text fg={theme.fg}>{timeStr}</text>
           </box>
         </box>
@@ -95,7 +67,7 @@ export function ProfileScreen() {
         {/* WPM Trend */}
         {wpmTrend.length > 0 && (
           <box style={{ flexDirection: "column", paddingTop: 1 }}>
-            <text fg={theme.fgFaint}>WPM TREND</text>
+            <text fg={theme.fgFaint}>Wpm Trend</text>
             <text>
               <span fg={theme.green}>{sparkline(wpmTrend)}</span>
               <span fg={theme.fgFaint}>
@@ -109,7 +81,7 @@ export function ProfileScreen() {
         {/* Per-key accuracy — compact grid */}
         {keyAccuracies.length > 0 && (
           <box style={{ flexDirection: "column", paddingTop: 1 }}>
-            <text fg={theme.fgFaint}>PER-KEY ACCURACY</text>
+            <text fg={theme.fgFaint}>Per-Key Accuracy</text>
             <KeyGrid keyAccuracies={keyAccuracies} />
           </box>
         )}
@@ -121,7 +93,7 @@ export function ProfileScreen() {
             border
             borderColor={theme.border}
           >
-            <text fg={theme.fgFaint}>AI COACH</text>
+            <text fg={theme.fgFaint}>Claude Insight</text>
             <text fg={theme.blue}>{narrative}</text>
           </box>
         )}
@@ -143,6 +115,12 @@ function sparkline(values: number[]): string {
   const max = Math.max(...values);
   const range = max - min || 1;
   return values.map((v) => blocks[Math.min(7, Math.round(((v - min) / range) * 7))]).join("");
+}
+
+function accuracyColor(accuracy: number): string {
+  if (accuracy >= 90) return theme.green;
+  if (accuracy >= 75) return theme.yellow;
+  return theme.red;
 }
 
 function KeyGrid({ keyAccuracies }: { keyAccuracies: KeyAccuracy[] }) {
@@ -168,15 +146,9 @@ function KeyGrid({ keyAccuracies }: { keyAccuracies: KeyAccuracy[] }) {
                 </span>
               );
             }
-            const color =
-              ka.accuracy >= 90
-                ? theme.green
-                : ka.accuracy >= 75
-                  ? theme.yellow
-                  : theme.red;
             const pct = ka.accuracy.toString().padStart(2, " ");
             return (
-              <span key={letter} fg={color}>
+              <span key={letter} fg={accuracyColor(ka.accuracy)}>
                 {letter} {pct}% {" "}
               </span>
             );

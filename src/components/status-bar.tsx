@@ -2,7 +2,7 @@ import { theme } from "../theme";
 import type { Screen } from "../types";
 
 const hints: Record<Screen, string> = {
-  typing: "tab profile  esc quit",
+  typing: "1-4 mode  tab profile  esc quit",
   results: "n next  q quit  p profile",
   profile: "tab back  n new round  q quit",
 };

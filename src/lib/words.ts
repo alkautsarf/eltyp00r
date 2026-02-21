@@ -164,6 +164,46 @@ export function generateRoundText(targetChars: number = 120, keyAccuracies?: Key
   return words.join(" ");
 }
 
+export function generateWarmupText(targetChars: number, keyAccuracies: KeyWeakness[]): string {
+  const qualified = keyAccuracies
+    .filter((ka) => ka.total >= 5)
+    .sort((a, b) => a.accuracy - b.accuracy);
+
+  const weakestKeys = new Set(qualified.slice(0, 5).map((ka) => ka.key));
+
+  if (weakestKeys.size === 0) {
+    return generateRoundText(targetChars);
+  }
+
+  const candidates = ALL_WORDS.filter((word) =>
+    word.split("").some((ch) => weakestKeys.has(ch.toLowerCase()))
+  );
+
+  if (candidates.length < 10) {
+    return generateRoundText(targetChars, keyAccuracies);
+  }
+
+  const weaknessMap = new Map<string, number>();
+  for (const ka of qualified.slice(0, 5)) {
+    weaknessMap.set(ka.key, Math.max(0.5, (100 - ka.accuracy) / 10));
+  }
+
+  const scored = candidates.map((word) => ({
+    word,
+    weight: scoreWord(word, weaknessMap),
+  }));
+
+  const words: string[] = [];
+  let length = 0;
+  while (length < targetChars) {
+    const word = weightedPick(scored);
+    words.push(word);
+    length += word.length + 1;
+  }
+
+  return words.join(" ");
+}
+
 export function splitIntoLines(text: string, maxWidth: number = 55): string[] {
   const words = text.split(" ");
   const lines: string[] = [];

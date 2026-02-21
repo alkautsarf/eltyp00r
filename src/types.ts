@@ -25,8 +25,11 @@ export interface KeyAccuracy {
   accuracy: number;
 }
 
+export type GameMode = "normal" | "timed30" | "timed60" | "warmup";
+
 export interface RoundResult {
   roundNumber: number;
+  gameMode: GameMode;
   wpm: number;
   rawWpm: number;
   accuracy: number;
