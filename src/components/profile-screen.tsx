@@ -21,7 +21,7 @@ export function ProfileScreen({ narrative }: ProfileScreenProps) {
     <box style={{ flexDirection: "column", width: "100%", height: "100%", justifyContent: "center", alignItems: "center" }}>
       <box style={{ flexDirection: "column", alignItems: "center" }}>
         {/* Title */}
-        <text fg={theme.fg}>your typing dna</text>
+        <text fg={theme.fg}>Your Typing DNA</text>
         <text />
 
         {/* Stats + Bests row */}

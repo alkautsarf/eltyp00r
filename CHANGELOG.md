@@ -4,6 +4,12 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1] - 2026-02-22
+
+### Changed
+
+- Profile screen title capitalized to "Your Typing DNA"
+
 ## [0.2.0] - 2026-02-22
 
 ### Added
@@ -65,6 +71,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.2.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.2.1
 [0.2.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.2.0
 [0.1.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.1.3
 [0.1.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.1.2
