@@ -4,6 +4,12 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.1] - 2026-02-21
+
+### Added
+
+- Automated release pipeline via GitHub Actions
+
 ## [0.1.0] - 2026-02-21
 
 ### Added
@@ -24,4 +30,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.1.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.1.1
 [0.1.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.1.0
