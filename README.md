@@ -21,23 +21,26 @@ Terminal typing trainer with adaptive difficulty and AI coaching. Built with [Op
 
 ## Install
 
+### Homebrew (macOS Apple Silicon)
+
 ```bash
+brew tap alkautsarf/tap
+brew install eltyp00r
+```
+
+Then run:
+
+```bash
+eltyp00r
+```
+
+### From source
+
+```bash
+git clone https://github.com/alkautsarf/eltyp00r.git
+cd eltyp00r
 bun install
-```
-
-## Usage
-
-```bash
 bun run src/index.tsx
-```
-
-Or create an alias:
-
-```bash
-# Add to ~/.local/bin/elt
-#!/bin/bash
-ELT_DIR="$HOME/Documents/eltyp00r"
-exec bun run "$ELT_DIR/src/index.tsx" "$@"
 ```
 
 ## Keybindings
