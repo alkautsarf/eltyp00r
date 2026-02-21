@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            target: darwin-arm64
+          - os: ubuntu-latest
+            target: linux-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      - name: Compile binary
+        run: |
+          bun build --compile src/index.tsx --outfile eltyp00r-${{ matrix.target }}
+
+      - name: Create tarball
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          tar -czf eltyp00r-${TAG}-${{ matrix.target }}.tar.gz eltyp00r-${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eltyp00r-${{ matrix.target }}
+          path: eltyp00r-v*-${{ matrix.target }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --generate-notes \
+            eltyp00r-${TAG}-*.tar.gz
+
+  update-tap:
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+
+          # Download the darwin-arm64 tarball and compute SHA
+          gh release download "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "eltyp00r-${TAG}-darwin-arm64.tar.gz"
+          SHA256=$(shasum -a 256 eltyp00r-${TAG}-darwin-arm64.tar.gz | cut -d' ' -f1)
+
+          # Clone tap repo
+          git clone https://x-access-token:${GH_TOKEN}@github.com/alkautsarf/homebrew-tap.git tap
+          cd tap
+
+          # Write updated formula
+          cat > Formula/eltyp00r.rb << EOF
+          class Eltyp00r < Formula
+            desc "Terminal typing trainer with adaptive difficulty and AI coaching"
+            homepage "https://github.com/alkautsarf/eltyp00r"
+            version "${VERSION}"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/alkautsarf/eltyp00r/releases/download/${TAG}/eltyp00r-${TAG}-darwin-arm64.tar.gz"
+                sha256 "${SHA256}"
+              end
+            end
+
+            def install
+              if Hardware::CPU.arm?
+                bin.install "eltyp00r-darwin-arm64" => "eltyp00r"
+              end
+            end
+
+            test do
+              assert_predicate bin/"eltyp00r", :executable?
+            end
+          end
+          EOF
+
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' Formula/eltyp00r.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/eltyp00r.rb
+          git commit -m "chore: bump eltyp00r to ${VERSION}"
+          git push
