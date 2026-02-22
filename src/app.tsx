@@ -12,7 +12,7 @@ import { updateKBFromRound, getKBContext } from "./lib/kb";
 import { getWhisper, getNarrative, generateAISentences, closeAISession } from "./lib/ai";
 import { GAME_MODE_CONFIGS, MODE_HOTKEYS } from "./lib/game-modes";
 
-export function App() {
+export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
   const renderer = useRenderer();
   const [screen, setScreen] = useState<Screen>("typing");
   const [roundNumber, setRoundNumber] = useState(1);
@@ -31,13 +31,14 @@ export function App() {
   const aiTextRef = useRef<string | null>(null);
 
   const preGenerateAIText = useCallback(() => {
+    if (!aiEnabled) return;
     aiTextRef.current = null;
     generateAISentences(getKBContext(), punctuationRef.current).then((text) => {
       if (text && text.length >= 20 && text.length <= 300) {
         aiTextRef.current = text;
       }
     }).catch(() => {});
-  }, []);
+  }, [aiEnabled]);
 
   // Session warm-up happens via startSession() on module load in ai.ts.
   // AI text pre-generation only fires when switching to AI mode or after an AI round.
@@ -72,10 +73,12 @@ export function App() {
     setScreen("results");
 
     // Pre-fetch whisper (API call starts now, result arrives while user reads stats)
-    const kbContext = getKBContext();
-    getWhisper(result, kbContext)
-      .then((text) => { if (text) setWhisperText(text); })
-      .catch(() => {});
+    if (aiEnabled) {
+      const kbContext = getKBContext();
+      getWhisper(result, kbContext)
+        .then((text) => { if (text) setWhisperText(text); })
+        .catch(() => {});
+    }
 
     // Mark narrative as stale so it refreshes next time profile is opened
     if (config.savesToDb) {
@@ -125,7 +128,7 @@ export function App() {
 
   const goToProfile = useCallback(() => {
     setScreen("profile");
-    if (narrativeStaleRef.current) {
+    if (aiEnabled && narrativeStaleRef.current) {
       narrativeStaleRef.current = false;
       const s = getAggregateStats();
       if (s.totalSessions >= 3) {
@@ -135,13 +138,13 @@ export function App() {
         });
       }
     }
-  }, []);
+  }, [aiEnabled]);
 
   const quit = useCallback(() => {
-    closeAISession();
+    if (aiEnabled) closeAISession();
     renderer.destroy();
     process.exit(0);
-  }, [renderer]);
+  }, [renderer, aiEnabled]);
 
   useKeyboard((key) => {
     key.preventDefault();
@@ -175,6 +178,7 @@ export function App() {
         }
         const mode = MODE_HOTKEYS[key.name];
         if (mode) {
+          if (mode === "ai" && !aiEnabled) return;
           if (mode !== gameMode) {
             setGameMode(mode);
             if (mode === "ai") preGenerateAIText();
@@ -218,6 +222,7 @@ export function App() {
             roundNumber={roundNumber}
             gameMode={gameMode}
             punctuation={punctuation}
+            aiEnabled={aiEnabled}
             lines={session.lines}
             progress={config.timeLimitMs !== null ? stats.timeProgress : session.progress}
             wpm={stats.wpm}
@@ -238,7 +243,7 @@ export function App() {
         )}
         {screen === "profile" && <ProfileScreen narrative={narrativeText} />}
       </box>
-      <StatusBar screen={screen} isTypingActive={screen === "typing" && session.isActive} />
+      <StatusBar screen={screen} isTypingActive={screen === "typing" && session.isActive} aiEnabled={aiEnabled} />
     </box>
   );
 }

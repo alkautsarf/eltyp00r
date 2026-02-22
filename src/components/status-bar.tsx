@@ -1,18 +1,19 @@
 import { theme } from "../theme";
 import type { Screen } from "../types";
 
-const hints: Record<Screen, string> = {
-  typing: "1-5 mode  ` punct  tab profile  esc quit",
-  results: "n next  q quit  p profile",
-  profile: "tab back  n new round  q quit",
-};
-
 interface StatusBarProps {
   screen: Screen;
   isTypingActive?: boolean;
+  aiEnabled?: boolean;
 }
 
-export function StatusBar({ screen, isTypingActive }: StatusBarProps) {
+export function StatusBar({ screen, isTypingActive, aiEnabled }: StatusBarProps) {
+  const modeRange = aiEnabled ? "1-5" : "1-4";
+  const hints: Record<Screen, string> = {
+    typing: `${modeRange} mode  \` punct  tab profile  esc quit`,
+    results: "n next  q quit  p profile",
+    profile: "tab back  n new round  q quit",
+  };
   const hint = screen === "typing" && isTypingActive
     ? "tab restart  esc quit"
     : hints[screen];

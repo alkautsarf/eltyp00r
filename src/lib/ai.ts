@@ -93,15 +93,23 @@ function startSession() {
   })();
 }
 
-// Start session on module load (warm-up during app startup)
-startSession();
+let aiInitialized = false;
+
+export function initAI(): boolean {
+  try {
+    startSession();
+    aiInitialized = true;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function sendQuery(prompt: string): Promise<string> {
-  // If session died, restart it
+  if (!aiInitialized) return "";
   if (!sessionAlive) {
-    startSession();
+    try { startSession(); } catch { return ""; }
   }
-
   return new Promise<string>((resolve) => {
     messageQueue.push({ prompt, resolve });
   });

@@ -1,6 +1,7 @@
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import { App } from "./app";
+import { initAI } from "./lib/ai";
 import pkg from "../package.json";
 
 if (process.argv.includes("--version") || process.argv.includes("-v")) {
@@ -8,5 +9,8 @@ if (process.argv.includes("--version") || process.argv.includes("-v")) {
   process.exit(0);
 }
 
+const noAi = process.argv.includes("--no-ai");
+const aiEnabled = !noAi && initAI();
+
 const renderer = await createCliRenderer({ exitOnCtrlC: false });
-createRoot(renderer).render(<App />);
+createRoot(renderer).render(<App aiEnabled={aiEnabled} />);

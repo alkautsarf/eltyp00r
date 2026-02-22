@@ -6,6 +6,7 @@ interface TypingScreenProps {
   roundNumber: number;
   gameMode: GameMode;
   punctuation?: boolean;
+  aiEnabled?: boolean;
   lines: TypedLine[];
   progress: number;
   wpm: number;
@@ -19,6 +20,7 @@ export function TypingScreen({
   roundNumber,
   gameMode,
   punctuation,
+  aiEnabled,
   lines,
   progress,
   wpm,
@@ -73,7 +75,9 @@ export function TypingScreen({
         <box style={{ height: 1, flexDirection: "row", justifyContent: "center", gap: 2 }}>
           {!isActive && (
             <>
-              {Object.entries(MODE_HOTKEYS).map(([key, mode]) => (
+              {Object.entries(MODE_HOTKEYS)
+                .filter(([, mode]) => mode !== "ai" || aiEnabled)
+                .map(([key, mode]) => (
                 <text key={key}>
                   <span fg={mode === gameMode ? theme.yellow : theme.fgDim}>
                     {key} {GAME_MODE_CONFIGS[mode].label}
