@@ -91,7 +91,7 @@ const CHALLENGING = [
   "pleasure", "separate", "unlikely", "creative", "neighbor",
   "educated", "elephant", "literary", "absolute", "dialogue",
   "generate", "frequent", "enormous", "equality", "fragment",
-  "internal", "judgment", "organize", "quantity", "relation",
+  "internal", "judgement", "organize", "quantity", "relation",
   "behavior", "dynamite", "umbrella", "accident", "platform",
   "schedule", "balanced", "champion", "describe", "critical",
   "evaluate", "generous", "homepage", "imperial", "keyboard",
