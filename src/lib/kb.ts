@@ -1,4 +1,5 @@
 import { db } from "./db";
+import type { ProblemWord } from "../types";
 
 function kbGet(category: string, key: string): any | null {
   const row = db
@@ -40,16 +41,34 @@ export function getKBContext(): string {
   return rows.map((r) => `[${r.category}] ${r.key}: ${r.value}`).join("\n");
 }
 
+function mergeProblemWords(newWords: ProblemWord[]): void {
+  const existing: ProblemWord[] = kbGet("patterns", "problem_words") || [];
+  const map = new Map<string, number>();
+  for (const pw of existing) map.set(pw.word, pw.errors);
+  for (const pw of newWords) map.set(pw.word, (map.get(pw.word) || 0) + pw.errors);
+
+  const merged = Array.from(map.entries())
+    .map(([word, errors]) => ({ word, errors }))
+    .sort((a, b) => b.errors - a.errors)
+    .slice(0, 50);
+
+  kbSet("patterns", "problem_words", merged);
+}
+
 export function updateKBFromRound(result: {
   wpm: number;
   accuracy: number;
   problemKeys: string[];
   keyAccuracies: Array<{ key: string; accuracy: number }>;
+  problemWords: ProblemWord[];
 }): void {
   kbMergeAverage("typing_speed", "wpm", result.wpm);
   kbMergeAverage("typing_speed", "accuracy", result.accuracy);
   kbSet("key_accuracy", "per_key", result.keyAccuracies);
   if (result.problemKeys.length > 0) {
     kbSet("patterns", "problem_keys", result.problemKeys);
+  }
+  if (result.problemWords.length > 0) {
+    mergeProblemWords(result.problemWords);
   }
 }

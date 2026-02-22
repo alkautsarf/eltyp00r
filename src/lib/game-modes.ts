@@ -42,6 +42,14 @@ export const GAME_MODE_CONFIGS: Record<GameMode, GameModeConfig> = {
     updatesKb: false,
     weakKeyBias: "heavy",
   },
+  ai: {
+    label: "claude",
+    targetChars: 120,
+    timeLimitMs: null,
+    savesToDb: true,
+    updatesKb: true,
+    weakKeyBias: "standard",
+  },
 };
 
 export const MODE_HOTKEYS: Record<string, GameMode> = {
@@ -49,4 +57,5 @@ export const MODE_HOTKEYS: Record<string, GameMode> = {
   "2": "timed30",
   "3": "timed60",
   "4": "warmup",
+  "5": "ai",
 };

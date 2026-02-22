@@ -25,7 +25,12 @@ export interface KeyAccuracy {
   accuracy: number;
 }
 
-export type GameMode = "normal" | "timed30" | "timed60" | "warmup";
+export interface ProblemWord {
+  word: string;
+  errors: number;
+}
+
+export type GameMode = "normal" | "timed30" | "timed60" | "warmup" | "ai";
 
 export interface RoundResult {
   roundNumber: number;
@@ -40,6 +45,7 @@ export interface RoundResult {
   keystrokeLog: KeystrokeEvent[];
   keyAccuracies: KeyAccuracy[];
   problemKeys: string[];
+  problemWords: ProblemWord[];
   timestamp: Date;
 }
 

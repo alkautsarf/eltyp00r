@@ -4,6 +4,23 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - 2026-02-23
+
+### Added
+
+- Claude mode (key 5): AI-generated typing sentences that adapt to your weak keys
+- Punctuation/capitalization toggle (backtick key): adds periods, commas, question marks, and proper casing across all modes
+- Per-word error tracking on results screen showing most-missed words
+- Tab restart mid-typing resets the round without changing modes
+
+### Fixed
+
+- Whisper coaching not appearing after rounds (resolver race condition with persistent AI session)
+- Tab restart not resetting WPM and accuracy stats
+- Switching modes incorrectly incrementing round number
+- Pressing the same mode key (e.g., 5 while in mode 5) starting the round
+- Claude mode stuck on "generating..." after tab restart or punctuation toggle
+
 ## [0.2.2] - 2026-02-22
 
 ### Fixed
@@ -77,6 +94,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.3.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.0
 [0.2.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.2.2
 [0.2.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.2.1
 [0.2.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.2.0

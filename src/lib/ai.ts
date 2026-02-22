@@ -33,20 +33,20 @@ class AsyncQueue<T> {
 // --- Persistent streaming session ---
 
 const messageQueue = new AsyncQueue<QueueItem>();
-let currentResolver: ((text: string) => void) | null = null;
+const resolverQueue: ((text: string) => void)[] = [];
 let sessionAlive = false;
 let activeStream: ReturnType<typeof query> | null = null;
 
 async function* messageGenerator(): AsyncGenerator<SDKUserMessage> {
   while (true) {
     const item = await messageQueue.pull();
-    currentResolver = item.resolve;
+    resolverQueue.push(item.resolve);
     yield {
-      type: "user" as const,
-      message: { role: "user" as const, content: item.prompt },
+      type: "user",
+      message: { role: "user", content: item.prompt },
       parent_tool_use_id: null,
       session_id: "",
-    };
+    } as SDKUserMessage;
   }
 }
 
@@ -72,24 +72,22 @@ function startSession() {
   (async () => {
     try {
       for await (const msg of stream as AsyncIterable<SDKMessage>) {
-        if (msg.type === "result" && msg.subtype === "success" && currentResolver) {
-          const text = ((msg.result as string) || "").replace(/^\n+/, "").trim();
-          currentResolver(text);
-          currentResolver = null;
-        } else if (msg.type === "result" && currentResolver) {
-          // Error result — resolve with empty string
-          currentResolver("");
-          currentResolver = null;
+        if (msg.type === "result" && resolverQueue.length > 0) {
+          const resolve = resolverQueue.shift()!;
+          if (msg.subtype === "success") {
+            resolve(((msg.result as string) || "").replace(/^\n+/, "").trim());
+          } else {
+            resolve("");
+          }
         }
       }
     } catch {
       // Session died
     } finally {
       sessionAlive = false;
-      // Resolve any pending query so it doesn't hang
-      if (currentResolver) {
-        currentResolver("");
-        currentResolver = null;
+      // Resolve any pending queries so they don't hang
+      while (resolverQueue.length > 0) {
+        resolverQueue.shift()!("");
       }
     }
   })();
@@ -120,11 +118,35 @@ export function closeAISession() {
 // --- Public API (unchanged signatures) ---
 
 export async function getWhisper(result: RoundResult, kbContext: string): Promise<string> {
+  const problemWordStr = result.problemWords.length > 0
+    ? `Problem words this round: ${result.problemWords.slice(0, 10).map((pw) => `"${pw.word}" (${pw.errors} errors)`).join(", ")}.`
+    : "";
+
   const prompt = `Round stats: ${result.wpm} WPM, ${result.accuracy}% accuracy, ${result.errorCount} errors out of ${result.charCount} chars.
 Problem keys: ${result.problemKeys.length > 0 ? result.problemKeys.join(", ") : "none"}.
+${problemWordStr}
 ${kbContext ? `Historical context:\n${kbContext}` : "No previous data."}
 
 Give ONE sentence of coaching advice (15-30 words). Focus on the most impactful thing to improve next round. No preamble, just the sentence.`;
+
+  return sendQuery(prompt);
+}
+
+export async function generateAISentences(kbContext: string, punctuation: boolean = false): Promise<string> {
+  const casingRule = punctuation
+    ? "- Use proper capitalization (capitalize first letter of sentences)"
+    : "- All lowercase";
+
+  const prompt = `Generate 2-3 natural English sentences for typing practice, approximately 120 characters total.
+${kbContext ? `The typist struggles with these patterns:\n${kbContext}\n\nIncorporate their problem keys and problem words naturally into the sentences.` : "Generate varied, natural sentences."}
+
+Rules:
+- Output ONLY the sentences, nothing else
+- Use only common punctuation (periods, commas)
+${casingRule}
+- No quotes, no special characters
+- Natural sounding, not contrived
+- Target approximately 120 characters total`;
 
   return sendQuery(prompt);
 }

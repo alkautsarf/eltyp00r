@@ -204,6 +204,41 @@ export function generateWarmupText(targetChars: number, keyAccuracies: KeyWeakne
   return words.join(" ");
 }
 
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+export function applyPunctuation(text: string): string {
+  const words = text.split(" ");
+  if (words.length === 0) return text;
+
+  words[0] = capitalize(words[0]);
+
+  let sinceLastPeriod = 0;
+  const nextPeriodAt = () => 4 + Math.floor(Math.random() * 5); // 4-8 words
+  let periodTarget = nextPeriodAt();
+
+  for (let i = 0; i < words.length; i++) {
+    sinceLastPeriod++;
+
+    if (sinceLastPeriod >= periodTarget && i < words.length - 1) {
+      words[i] += Math.random() < 0.1 ? "?" : ".";
+      words[i + 1] = capitalize(words[i + 1]);
+      sinceLastPeriod = 0;
+      periodTarget = nextPeriodAt();
+    } else if (sinceLastPeriod > 1 && Math.random() < 0.15 && i < words.length - 1) {
+      words[i] += ",";
+    }
+  }
+
+  const last = words.length - 1;
+  if (!words[last].endsWith(".") && !words[last].endsWith("?")) {
+    words[last] += ".";
+  }
+
+  return words.join(" ");
+}
+
 export function splitIntoLines(text: string, maxWidth: number = 55): string[] {
   const words = text.split(" ");
   const lines: string[] = [];

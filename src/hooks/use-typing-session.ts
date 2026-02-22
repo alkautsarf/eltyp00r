@@ -1,19 +1,57 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
-import type { TypedChar, TypedLine, KeystrokeEvent, KeyAccuracy, RoundResult, GameMode } from "../types";
-import { generateRoundText, generateWarmupText, splitIntoLines } from "../lib/words";
+import type { TypedChar, TypedLine, KeystrokeEvent, KeyAccuracy, RoundResult, GameMode, ProblemWord } from "../types";
+import { generateRoundText, generateWarmupText, applyPunctuation, splitIntoLines } from "../lib/words";
 import { getPerKeyAccuracy } from "../lib/db";
 import { GAME_MODE_CONFIGS } from "../lib/game-modes";
 
 interface UseTypingSessionOptions {
   roundNumber: number;
+  resetKey?: number;
   gameMode: GameMode;
+  punctuation?: boolean;
   onRoundComplete: (result: RoundResult) => void;
+  getInitialText?: () => string | null;
 }
 
-export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: UseTypingSessionOptions) {
+function deriveProblemWords(keystrokeLog: KeystrokeEvent[], targetText: string): ProblemWord[] {
+  const words: { word: string; start: number; end: number }[] = [];
+  let pos = 0;
+  for (const w of targetText.split(" ")) {
+    words.push({ word: w, start: pos, end: pos + w.length - 1 });
+    pos += w.length + 1;
+  }
+
+  const wordErrors = new Map<string, { word: string; errors: number }>();
+  let cursor = 0;
+  for (const event of keystrokeLog) {
+    if (event.isError) {
+      const wordEntry = words.find((w) => cursor >= w.start && cursor <= w.end);
+      if (wordEntry) {
+        const key = `${wordEntry.word}:${wordEntry.start}`;
+        const existing = wordErrors.get(key);
+        if (existing) existing.errors++;
+        else wordErrors.set(key, { word: wordEntry.word, errors: 1 });
+      }
+    } else {
+      cursor++;
+    }
+  }
+
+  const merged = new Map<string, number>();
+  for (const { word, errors } of wordErrors.values()) {
+    merged.set(word, (merged.get(word) || 0) + errors);
+  }
+
+  return Array.from(merged.entries())
+    .map(([word, errors]) => ({ word, errors }))
+    .sort((a, b) => b.errors - a.errors);
+}
+
+export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation, onRoundComplete, getInitialText }: UseTypingSessionOptions) {
   const [chars, setChars] = useState<TypedChar[]>([]);
   const [isActive, setIsActive] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [targetText, setTargetText] = useState("");
 
   const cursorRef = useRef(0);
@@ -28,14 +66,7 @@ export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: Use
   const isActiveRef = useRef(false);
   const targetTextRef = useRef("");
 
-  useEffect(() => {
-    const config = GAME_MODE_CONFIGS[gameMode];
-    const keyAccuracies = getPerKeyAccuracy();
-
-    const text = gameMode === "warmup"
-      ? generateWarmupText(config.targetChars, keyAccuracies)
-      : generateRoundText(config.targetChars, keyAccuracies);
-
+  const initWithText = useCallback((text: string) => {
     setTargetText(text);
     targetTextRef.current = text;
     setChars(
@@ -48,6 +79,7 @@ export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: Use
     setCursorIndex(0);
     setIsActive(false);
     setIsComplete(false);
+    setIsLoading(false);
     isCompleteRef.current = false;
     isActiveRef.current = false;
     keystrokeLogRef.current = [];
@@ -55,7 +87,37 @@ export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: Use
     correctCountRef.current = 0;
     errorCountRef.current = 0;
     totalTypedRef.current = 0;
-  }, [roundNumber, gameMode]);
+  }, []);
+
+  useEffect(() => {
+    const config = GAME_MODE_CONFIGS[gameMode];
+
+    if (gameMode === "ai") {
+      const aiText = getInitialText?.();
+      if (aiText && aiText.length >= 20) {
+        initWithText(aiText);
+      } else {
+        // Show loading state, poll for AI text
+        setIsLoading(true);
+        setChars([]);
+        setTargetText("");
+        const interval = setInterval(() => {
+          const text = getInitialText?.();
+          if (text && text.length >= 20) {
+            clearInterval(interval);
+            initWithText(text);
+          }
+        }, 200);
+        return () => clearInterval(interval);
+      }
+    } else {
+      const keyAccuracies = getPerKeyAccuracy();
+      const rawText = gameMode === "warmup"
+        ? generateWarmupText(config.targetChars, keyAccuracies)
+        : generateRoundText(config.targetChars, keyAccuracies);
+      initWithText(punctuation ? applyPunctuation(rawText) : rawText);
+    }
+  }, [roundNumber, resetKey, gameMode, punctuation]);
 
   const lines = useMemo<TypedLine[]>(() => {
     if (chars.length === 0 || !targetText) return [];
@@ -121,6 +183,7 @@ export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: Use
 
     const typedText = targetTextRef.current.substring(0, cursorRef.current);
     const wordCount = typedText.trim().split(/\s+/).filter(Boolean).length;
+    const problemWords = deriveProblemWords(keystrokeLogRef.current, typedText);
 
     return {
       roundNumber,
@@ -135,6 +198,7 @@ export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: Use
       keystrokeLog: [...keystrokeLogRef.current],
       keyAccuracies,
       problemKeys,
+      problemWords,
       timestamp: new Date(),
     };
   }, [roundNumber, gameMode]);
@@ -201,7 +265,8 @@ export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: Use
         // Timed modes: extend text when nearing end
         const config = GAME_MODE_CONFIGS[gameMode];
         if (config.timeLimitMs !== null && next.length - newIdx < 50) {
-          const moreText = " " + generateRoundText(200, getPerKeyAccuracy());
+          const rawMore = generateRoundText(200, getPerKeyAccuracy());
+          const moreText = " " + (punctuation ? applyPunctuation(rawMore) : rawMore);
           const moreChars: TypedChar[] = moreText.split("").map((char) => ({
             char,
             state: "upcoming" as const,
@@ -217,8 +282,23 @@ export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: Use
         return next;
       });
     },
-    [gameMode, completeRound]
+    [gameMode, punctuation, completeRound]
   );
+
+  // Immediately reset refs when resetKey changes (before useEffect fires).
+  // This prevents stale stats from flashing during the intermediate render.
+  const prevResetKeyRef = useRef(resetKey);
+  if (resetKey !== undefined && resetKey !== prevResetKeyRef.current) {
+    prevResetKeyRef.current = resetKey;
+    cursorRef.current = 0;
+    isActiveRef.current = false;
+    isCompleteRef.current = false;
+    roundStartTimeRef.current = 0;
+    correctCountRef.current = 0;
+    errorCountRef.current = 0;
+    totalTypedRef.current = 0;
+    keystrokeLogRef.current = [];
+  }
 
   const progress = chars.length > 0 ? Math.round((cursorIndex / chars.length) * 100) : 0;
 
@@ -226,6 +306,7 @@ export function useTypingSession({ roundNumber, gameMode, onRoundComplete }: Use
     lines,
     isActive,
     isComplete,
+    isLoading,
     correctCount: correctCountRef.current,
     totalTyped: totalTypedRef.current,
     progress,

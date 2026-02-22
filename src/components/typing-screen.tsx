@@ -5,23 +5,27 @@ import { GAME_MODE_CONFIGS, MODE_HOTKEYS } from "../lib/game-modes";
 interface TypingScreenProps {
   roundNumber: number;
   gameMode: GameMode;
+  punctuation?: boolean;
   lines: TypedLine[];
   progress: number;
   wpm: number;
   accuracy: number;
   elapsed: string;
   isActive: boolean;
+  isLoading?: boolean;
 }
 
 export function TypingScreen({
   roundNumber,
   gameMode,
+  punctuation,
   lines,
   progress,
   wpm,
   accuracy,
   elapsed,
   isActive,
+  isLoading,
 }: TypingScreenProps) {
   const config = GAME_MODE_CONFIGS[gameMode];
   return (
@@ -67,13 +71,20 @@ export function TypingScreen({
 
         {/* Mode selector — visible before typing, invisible placeholder during */}
         <box style={{ height: 1, flexDirection: "row", justifyContent: "center", gap: 2 }}>
-          {!isActive && Object.entries(MODE_HOTKEYS).map(([key, mode]) => (
-            <text key={key}>
-              <span fg={mode === gameMode ? theme.yellow : theme.fgDim}>
-                {key} {GAME_MODE_CONFIGS[mode].label}
-              </span>
-            </text>
-          ))}
+          {!isActive && (
+            <>
+              {Object.entries(MODE_HOTKEYS).map(([key, mode]) => (
+                <text key={key}>
+                  <span fg={mode === gameMode ? theme.yellow : theme.fgDim}>
+                    {key} {GAME_MODE_CONFIGS[mode].label}
+                  </span>
+                </text>
+              ))}
+              <text>
+                <span fg={punctuation ? theme.yellow : theme.fgDim}>` .Aa</span>
+              </text>
+            </>
+          )}
         </box>
 
         <text />
@@ -82,9 +93,13 @@ export function TypingScreen({
 
         {/* Typing area */}
         <box style={{ flexDirection: "column", gap: 0 }}>
-          {lines.map((line, lineIdx) => (
-            <TextLine key={lineIdx} line={line} />
-          ))}
+          {isLoading ? (
+            <text fg={theme.fgDim}>generating...</text>
+          ) : (
+            lines.map((line, lineIdx) => (
+              <TextLine key={lineIdx} line={line} />
+            ))
+          )}
         </box>
       </box>
     </box>

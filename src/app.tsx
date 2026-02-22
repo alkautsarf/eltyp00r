@@ -9,13 +9,14 @@ import { useTypingSession } from "./hooks/use-typing-session";
 import { useStats } from "./hooks/use-stats";
 import { saveSession, updateGoalProgress, getPersonalBests, getAggregateStats } from "./lib/db";
 import { updateKBFromRound, getKBContext } from "./lib/kb";
-import { getWhisper, getNarrative, closeAISession } from "./lib/ai";
+import { getWhisper, getNarrative, generateAISentences, closeAISession } from "./lib/ai";
 import { GAME_MODE_CONFIGS, MODE_HOTKEYS } from "./lib/game-modes";
 
 export function App() {
   const renderer = useRenderer();
   const [screen, setScreen] = useState<Screen>("typing");
   const [roundNumber, setRoundNumber] = useState(1);
+  const [resetKey, setResetKey] = useState(0);
   const [gameMode, setGameMode] = useState<GameMode>("normal");
   const [currentResult, setCurrentResult] = useState<RoundResult | null>(null);
   const [previousWpm, setPreviousWpm] = useState<number | null>(null);
@@ -23,7 +24,29 @@ export function App() {
   const [isNewPbWpm, setIsNewPbWpm] = useState(false);
   const [isNewPbAccuracy, setIsNewPbAccuracy] = useState(false);
   const [narrativeText, setNarrativeText] = useState<string | null>(null);
+  const [punctuation, setPunctuation] = useState(false);
+  const punctuationRef = useRef(false);
+  punctuationRef.current = punctuation;
   const narrativeStaleRef = useRef(true);
+  const aiTextRef = useRef<string | null>(null);
+
+  const preGenerateAIText = useCallback(() => {
+    aiTextRef.current = null;
+    generateAISentences(getKBContext(), punctuationRef.current).then((text) => {
+      if (text && text.length >= 20 && text.length <= 300) {
+        aiTextRef.current = text;
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Session warm-up happens via startSession() on module load in ai.ts.
+  // AI text pre-generation only fires when switching to AI mode or after an AI round.
+
+  const getInitialText = useCallback(() => {
+    const text = aiTextRef.current;
+    aiTextRef.current = null;
+    return text;
+  }, []);
 
   const handleRoundComplete = useCallback((result: RoundResult) => {
     const config = GAME_MODE_CONFIGS[result.gameMode];
@@ -50,22 +73,30 @@ export function App() {
 
     // Pre-fetch whisper (API call starts now, result arrives while user reads stats)
     const kbContext = getKBContext();
-    getWhisper(result, kbContext).then((text) => {
-      if (text) setWhisperText(text);
-    });
+    getWhisper(result, kbContext)
+      .then((text) => { if (text) setWhisperText(text); })
+      .catch(() => {});
 
     // Mark narrative as stale so it refreshes next time profile is opened
     if (config.savesToDb) {
       narrativeStaleRef.current = true;
     }
-  }, []);
+
+    // Pre-generate AI text for next round
+    if (result.gameMode === "ai") {
+      preGenerateAIText();
+    }
+  }, [preGenerateAIText]);
 
   const config = GAME_MODE_CONFIGS[gameMode];
 
   const session = useTypingSession({
     roundNumber,
+    resetKey,
     gameMode,
+    punctuation,
     onRoundComplete: handleRoundComplete,
+    getInitialText,
   });
 
   const stats = useStats({
@@ -121,20 +152,38 @@ export function App() {
     }
 
     if (screen === "typing") {
-      if (key.name === "tab") { goToProfile(); return; }
+      if (key.name === "tab") {
+        if (session.isActive) {
+          if (gameMode === "ai") preGenerateAIText();
+          setResetKey((n) => n + 1);
+        } else {
+          goToProfile();
+        }
+        return;
+      }
       if (session.isComplete) {
-        if (key.name === "n") { startNextRound(); }
+        if (key.name === "n") startNextRound();
         return;
       }
 
       if (!session.isActive && !key.ctrl && !key.meta && !key.option) {
+        if (key.name === "`") {
+          punctuationRef.current = !punctuationRef.current;
+          setPunctuation((p) => !p);
+          if (gameMode === "ai") preGenerateAIText();
+          return;
+        }
         const mode = MODE_HOTKEYS[key.name];
-        if (mode && mode !== gameMode) {
-          setGameMode(mode);
-          setRoundNumber((n) => n + 1);
+        if (mode) {
+          if (mode !== gameMode) {
+            setGameMode(mode);
+            if (mode === "ai") preGenerateAIText();
+          }
           return;
         }
       }
+
+      if (session.isLoading) return;
 
       if (key.name === "space") {
         session.handleKeyPress(" ");
@@ -149,15 +198,15 @@ export function App() {
     }
 
     if (screen === "results") {
-      if (key.name === "n") { startNextRound(); return; }
-      if (key.name === "q") { quit(); return; }
-      if (key.name === "p") { goToProfile(); return; }
+      if (key.name === "n") return startNextRound();
+      if (key.name === "q") return quit();
+      if (key.name === "p") return goToProfile();
     }
 
     if (screen === "profile") {
       if (key.name === "tab") { setScreen("typing"); return; }
-      if (key.name === "n") { startNextRound(); return; }
-      if (key.name === "q") { quit(); return; }
+      if (key.name === "n") return startNextRound();
+      if (key.name === "q") return quit();
     }
   });
 
@@ -168,12 +217,14 @@ export function App() {
           <TypingScreen
             roundNumber={roundNumber}
             gameMode={gameMode}
+            punctuation={punctuation}
             lines={session.lines}
             progress={config.timeLimitMs !== null ? stats.timeProgress : session.progress}
             wpm={stats.wpm}
             accuracy={stats.accuracy}
             elapsed={stats.elapsed}
             isActive={session.isActive}
+            isLoading={session.isLoading}
           />
         )}
         {screen === "results" && currentResult && (
@@ -187,7 +238,7 @@ export function App() {
         )}
         {screen === "profile" && <ProfileScreen narrative={narrativeText} />}
       </box>
-      <StatusBar screen={screen} />
+      <StatusBar screen={screen} isTypingActive={screen === "typing" && session.isActive} />
     </box>
   );
 }
