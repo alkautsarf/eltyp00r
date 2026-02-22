@@ -4,10 +4,13 @@ Terminal typing trainer with adaptive difficulty and AI coaching. Built with [Op
 
 ## Features
 
+- **Game modes** -- Normal, timed 30s, timed 60s, warm-up (heavy weak-key bias), and Claude (AI-generated sentences targeting your weaknesses)
 - **Adaptive word selection** -- Tracks per-key accuracy across sessions and biases word generation toward your weak keys
 - **keybr-style typing model** -- Sticky cursor that doesn't advance on errors, forcing you to hit the correct key before moving on
+- **Punctuation mode** -- Toggle capitalization and punctuation (periods, commas, question marks) across all modes
 - **AI coaching** -- Post-round whispers and profile narratives powered by Claude, with a knowledge base that accumulates across sessions
 - **Per-key accuracy tracking** -- A-Z breakdown with color-coded accuracy grid
+- **Per-word error tracking** -- Results screen shows your most-missed words each round
 - **Personal bests** -- Tracks and notifies you when you hit a new PB for WPM or accuracy
 - **Persistent stats** -- SQLite database stores all sessions, keystroke logs, and trends at `~/.eltyp00r/data.db`
 
@@ -15,7 +18,7 @@ Terminal typing trainer with adaptive difficulty and AI coaching. Built with [Op
 
 **Typing** -- Live WPM, accuracy, timer, and progress bar. White text turns dim as you type, red marks keys you struggled with.
 
-**Results** -- WPM with delta from last round, accuracy, error count, problem keys, and an AI coaching nudge.
+**Results** -- WPM with delta from last round, accuracy, error count, problem keys, problem words, and an AI coaching nudge.
 
 **Profile** -- Aggregate stats, WPM sparkline trend, per-key accuracy grid, personal bests, and an AI progress narrative.
 
@@ -43,18 +46,28 @@ bun install
 bun run src/index.tsx
 ```
 
+## Usage
+
+```bash
+eltyp00r            # start with AI features enabled
+eltyp00r --no-ai    # disable all AI features (no Claude auth required)
+```
+
 ## Keybindings
 
-| Screen  | Key   | Action         |
-|---------|-------|----------------|
-| Typing  | tab   | Go to profile  |
-| Typing  | esc   | Quit           |
-| Results | n     | Next round     |
-| Results | q     | Quit           |
-| Results | p     | Go to profile  |
-| Profile | tab   | Back to typing |
-| Profile | n     | New round      |
-| Profile | q     | Quit           |
+| Screen  | Key       | Action                  |
+|---------|-----------|-------------------------|
+| Typing  | 1-4       | Switch mode             |
+| Typing  | 5         | Claude mode (AI)        |
+| Typing  | `` ` ``   | Toggle punctuation      |
+| Typing  | tab       | Go to profile / restart |
+| Typing  | esc       | Quit                    |
+| Results | n         | Next round              |
+| Results | q         | Quit                    |
+| Results | p         | Go to profile           |
+| Profile | tab       | Back to typing          |
+| Profile | n         | New round               |
+| Profile | q         | Quit                    |
 
 ## Stack
 
