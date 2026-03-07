@@ -110,9 +110,9 @@ export function getPersonalBests(): { bestWpm: number; bestAccuracy: number } {
 
 export function getWpmTrend(limit: number = 30): number[] {
   const rows = db
-    .query("SELECT wpm FROM sessions ORDER BY created_at ASC LIMIT ?")
+    .query("SELECT wpm FROM sessions ORDER BY created_at DESC LIMIT ?")
     .all(limit) as { wpm: number }[];
-  return rows.map((r) => Math.round(r.wpm));
+  return rows.map((r) => Math.round(r.wpm)).reverse();
 }
 
 export function getPerKeyAccuracy(): KeyAccuracy[] {

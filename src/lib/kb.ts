@@ -34,7 +34,7 @@ function kbMergeAverage(category: string, key: string, newValue: number, weight:
 
 export function getKBContext(): string {
   const rows = db
-    .query("SELECT category, key, value FROM kb ORDER BY category, key")
+    .query("SELECT category, key, value FROM kb WHERE category != 'typing_speed' ORDER BY category, key")
     .all() as Array<{ category: string; key: string; value: string }>;
   if (rows.length === 0) return "";
 
@@ -62,8 +62,6 @@ export function updateKBFromRound(result: {
   keyAccuracies: Array<{ key: string; accuracy: number }>;
   problemWords: ProblemWord[];
 }): void {
-  kbMergeAverage("typing_speed", "wpm", result.wpm);
-  kbMergeAverage("typing_speed", "accuracy", result.accuracy);
   kbSet("key_accuracy", "per_key", result.keyAccuracies);
   if (result.problemKeys.length > 0) {
     kbSet("patterns", "problem_keys", result.problemKeys);
