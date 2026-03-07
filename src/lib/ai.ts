@@ -1,8 +1,28 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKUserMessage, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { RoundResult } from "../types";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
+import { execSync } from "node:child_process";
 
 const MODEL = "claude-opus-4-6";
+
+// In compiled binaries, import.meta.url points to $bunfs virtual filesystem
+// where cli.js doesn't exist. Find the system claude binary instead.
+const IS_COMPILED = import.meta.url.includes("$bunfs");
+
+function findClaudeBinary(): string | null {
+  const local = join(homedir(), ".local", "bin", "claude");
+  if (existsSync(local)) return local;
+  try {
+    const found = execSync("which claude 2>/dev/null", { encoding: "utf8" }).trim();
+    if (found && existsSync(found)) return found;
+  } catch {}
+  return null;
+}
+
+const claudeCodePath = IS_COMPILED ? findClaudeBinary() : undefined;
 
 const SYSTEM_BASE = `You are a typing coach inside eltyp00r, a terminal typing trainer. Be concise, encouraging, and specific. Write like a human. Never use em-dashes or en-dashes. Never use markdown formatting (no **bold**, *italic*, headers, or lists). Output plain text only. Avoid AI jargon like "delve", "leverage", "seamless", "robust", "utilize", "cutting-edge". Use simple, natural, conversational language.`;
 
@@ -63,6 +83,7 @@ function startSession() {
       allowDangerouslySkipPermissions: true,
       effort: "low",
       persistSession: false,
+      ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     },
   });
 
@@ -96,6 +117,7 @@ function startSession() {
 let aiInitialized = false;
 
 export function initAI(): boolean {
+  if (IS_COMPILED && !claudeCodePath) return false;
   try {
     startSession();
     aiInitialized = true;

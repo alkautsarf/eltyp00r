@@ -4,6 +4,12 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.3] - 2026-03-07
+
+### Fixed
+
+- AI features not working in compiled binary (resolve system claude binary for Homebrew installs)
+
 ## [0.3.2] - 2026-03-07
 
 ### Fixed
@@ -111,6 +117,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.3.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.3
 [0.3.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.2
 [0.3.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.1
 [0.3.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.0
