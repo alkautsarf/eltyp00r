@@ -9,8 +9,13 @@ import { useTypingSession } from "./hooks/use-typing-session";
 import { useStats } from "./hooks/use-stats";
 import { saveSession, updateGoalProgress, getPersonalBests, getAggregateStats } from "./lib/db";
 import { updateKBFromRound, getKBContext } from "./lib/kb";
-import { getWhisper, getNarrative, generateAISentences, closeAISession } from "./lib/ai";
+import { getWhisper, getAllNarratives, generateAISentences, closeAISession, flushAIBuffer } from "./lib/ai";
 import { GAME_MODE_CONFIGS, MODE_HOTKEYS } from "./lib/game-modes";
+
+type NarrativeCacheKey = "all" | "noPunct" | "punct";
+function filterCacheKey(filter: boolean | undefined): NarrativeCacheKey {
+  return filter === undefined ? "all" : filter ? "punct" : "noPunct";
+}
 
 export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
   const renderer = useRenderer();
@@ -24,17 +29,19 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
   const [isNewPbWpm, setIsNewPbWpm] = useState(false);
   const [isNewPbAccuracy, setIsNewPbAccuracy] = useState(false);
   const [narrativeText, setNarrativeText] = useState<string | null>(null);
+  const narrativeCacheRef = useRef<Map<string, string>>(new Map());
   const [punctuation, setPunctuation] = useState(false);
   const punctuationRef = useRef(false);
   punctuationRef.current = punctuation;
   const narrativeStaleRef = useRef(true);
   const aiTextRef = useRef<string | null>(null);
+  const [profileFilter, setProfileFilter] = useState<boolean | undefined>(undefined);
 
   const preGenerateAIText = useCallback(() => {
     if (!aiEnabled) return;
     aiTextRef.current = null;
     generateAISentences(getKBContext(), punctuationRef.current).then((text) => {
-      if (text && text.length >= 20 && text.length <= 300) {
+      if (text && text.length >= 20) {
         aiTextRef.current = text;
       }
     }).catch(() => {});
@@ -54,7 +61,7 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
 
     if (config.savesToDb) {
       // Check PBs before saving so current round isn't included
-      const bests = getPersonalBests();
+      const bests = getPersonalBests(result.punctuation);
       setIsNewPbWpm(result.wpm > bests.bestWpm);
       setIsNewPbAccuracy(result.accuracy > bests.bestAccuracy);
       saveSession(result);
@@ -83,6 +90,7 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
     // Mark narrative as stale so it refreshes next time profile is opened
     if (config.savesToDb) {
       narrativeStaleRef.current = true;
+      narrativeCacheRef.current.clear();
     }
 
     // Pre-generate AI text for next round
@@ -126,19 +134,43 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
     setScreen("typing");
   }, [currentResult]);
 
+  const fetchAllNarratives = useCallback((displayFilter?: boolean) => {
+    if (!aiEnabled) return;
+    const allStats = getAggregateStats(undefined);
+    const noPunctStats = getAggregateStats(false);
+    const punctStats = getAggregateStats(true);
+    const kbContext = getKBContext();
+
+    getAllNarratives(
+      allStats.totalSessions >= 3 ? allStats : null,
+      noPunctStats.totalSessions >= 3 ? noPunctStats : null,
+      punctStats.totalSessions >= 3 ? punctStats : null,
+      kbContext
+    ).then((results) => {
+      if (results.all) narrativeCacheRef.current.set("all", results.all);
+      if (results.noPunct) narrativeCacheRef.current.set("noPunct", results.noPunct);
+      if (results.punct) narrativeCacheRef.current.set("punct", results.punct);
+
+      const text = narrativeCacheRef.current.get(filterCacheKey(displayFilter));
+      setNarrativeText(text || null);
+    });
+  }, [aiEnabled]);
+
   const goToProfile = useCallback(() => {
     setScreen("profile");
     if (aiEnabled && narrativeStaleRef.current) {
       narrativeStaleRef.current = false;
-      const s = getAggregateStats();
-      if (s.totalSessions >= 3) {
-        const kbContext = getKBContext();
-        getNarrative(s, kbContext).then((text) => {
-          if (text) setNarrativeText(text);
-        });
-      }
+      const cached = narrativeCacheRef.current.get(filterCacheKey(profileFilter));
+      if (cached) setNarrativeText(cached);
+      fetchAllNarratives(profileFilter);
     }
-  }, [aiEnabled]);
+  }, [aiEnabled, profileFilter, fetchAllNarratives]);
+
+  const cycleProfileFilter = useCallback(() => {
+    const next = profileFilter === undefined ? false : profileFilter === false ? true : undefined;
+    setProfileFilter(next);
+    setNarrativeText(narrativeCacheRef.current.get(filterCacheKey(next)) || null);
+  }, [profileFilter]);
 
   const quit = useCallback(() => {
     if (aiEnabled) closeAISession();
@@ -173,6 +205,7 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
         if (key.name === "`") {
           punctuationRef.current = !punctuationRef.current;
           setPunctuation((p) => !p);
+          if (aiEnabled) flushAIBuffer();
           if (gameMode === "ai") preGenerateAIText();
           return;
         }
@@ -209,6 +242,7 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
 
     if (screen === "profile") {
       if (key.name === "tab") { setScreen("typing"); return; }
+      if (key.name === "f") return cycleProfileFilter();
       if (key.name === "n") return startNextRound();
       if (key.name === "q") return quit();
     }
@@ -241,7 +275,7 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
             isNewPbAccuracy={isNewPbAccuracy}
           />
         )}
-        {screen === "profile" && <ProfileScreen narrative={narrativeText} />}
+        {screen === "profile" && <ProfileScreen narrative={narrativeText} punctuationFilter={profileFilter} />}
       </box>
       <StatusBar screen={screen} isTypingActive={screen === "typing" && session.isActive} aiEnabled={aiEnabled} />
     </box>

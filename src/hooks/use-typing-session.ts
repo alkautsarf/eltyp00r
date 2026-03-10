@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { computeKeyAccuracies } from "../types";
 import type { TypedChar, TypedLine, KeystrokeEvent, KeyAccuracy, RoundResult, GameMode, ProblemWord } from "../types";
 import { generateRoundText, generateWarmupText, applyPunctuation, splitIntoLines } from "../lib/words";
 import { getPerKeyAccuracy } from "../lib/db";
@@ -65,6 +66,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
   const isCompleteRef = useRef(false);
   const isActiveRef = useRef(false);
   const targetTextRef = useRef("");
+  const cachedKeyAccuraciesRef = useRef<KeyAccuracy[]>([]);
 
   const initWithText = useCallback((text: string) => {
     setTargetText(text);
@@ -112,6 +114,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
       }
     } else {
       const keyAccuracies = getPerKeyAccuracy();
+      cachedKeyAccuraciesRef.current = keyAccuracies;
       const rawText = gameMode === "warmup"
         ? generateWarmupText(config.targetChars, keyAccuracies)
         : generateRoundText(config.targetChars, keyAccuracies);
@@ -155,26 +158,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
         ? Math.round((correctCountRef.current / totalTypedRef.current) * 1000) / 10
         : 100;
 
-    const keyStats = new Map<string, { correct: number; incorrect: number }>();
-    for (const event of keystrokeLogRef.current) {
-      if (!event.targetChar) continue;
-      const k = event.targetChar.toLowerCase();
-      if (k.length !== 1 || k < "a" || k > "z") continue;
-      if (!keyStats.has(k)) keyStats.set(k, { correct: 0, incorrect: 0 });
-      const stat = keyStats.get(k)!;
-      if (event.isError) stat.incorrect++;
-      else stat.correct++;
-    }
-
-    const keyAccuracies: KeyAccuracy[] = Array.from(keyStats.entries())
-      .map(([key, { correct, incorrect }]) => ({
-        key,
-        correct,
-        incorrect,
-        total: correct + incorrect,
-        accuracy: correct + incorrect > 0 ? Math.round((correct / (correct + incorrect)) * 100) : 100,
-      }))
-      .sort((a, b) => a.key.localeCompare(b.key));
+    const keyAccuracies = computeKeyAccuracies(keystrokeLogRef.current);
 
     const problemKeys = keyAccuracies
       .filter((k) => k.accuracy < 80 && k.total >= 2)
@@ -199,9 +183,10 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
       keyAccuracies,
       problemKeys,
       problemWords,
+      punctuation: !!punctuation,
       timestamp: new Date(),
     };
-  }, [roundNumber, gameMode]);
+  }, [roundNumber, gameMode, punctuation]);
 
   const completeRound = useCallback(() => {
     if (isCompleteRef.current) return;
@@ -265,7 +250,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
         // Timed modes: extend text when nearing end
         const config = GAME_MODE_CONFIGS[gameMode];
         if (config.timeLimitMs !== null && next.length - newIdx < 50) {
-          const rawMore = generateRoundText(200, getPerKeyAccuracy());
+          const rawMore = generateRoundText(200, cachedKeyAccuraciesRef.current);
           const moreText = " " + (punctuation ? applyPunctuation(rawMore) : rawMore);
           const moreChars: TypedChar[] = moreText.split("").map((char) => ({
             char,

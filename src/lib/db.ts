@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { classifyKey } from "../types";
 import type { RoundResult, KeyAccuracy, GoalRow } from "../types";
 
 const DATA_DIR = join(homedir(), ".eltyp00r");
@@ -49,11 +50,23 @@ db.exec(`
   );
 `);
 
+// Migration: add punctuation column to existing databases
+try {
+  db.exec("ALTER TABLE sessions ADD COLUMN punctuation INTEGER NOT NULL DEFAULT 0");
+} catch {
+  // Column already exists
+}
+
+function punctuationWhere(punctuation?: boolean): { clause: string; params: (number)[] } {
+  if (punctuation === undefined) return { clause: "", params: [] };
+  return { clause: "WHERE punctuation = ?", params: [punctuation ? 1 : 0] };
+}
+
 export function saveSession(result: RoundResult): string {
   const id = crypto.randomUUID();
   db.run(
-    `INSERT INTO sessions (id, wpm, raw_wpm, accuracy, duration, char_count, error_count, word_count, keystroke_log)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO sessions (id, wpm, raw_wpm, accuracy, duration, char_count, error_count, word_count, keystroke_log, punctuation)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       result.wpm,
@@ -64,17 +77,19 @@ export function saveSession(result: RoundResult): string {
       result.errorCount,
       result.wordCount,
       JSON.stringify(result.keystrokeLog),
+      result.punctuation ? 1 : 0,
     ]
   );
   return id;
 }
 
-export function getAggregateStats(): {
+export function getAggregateStats(punctuation?: boolean): {
   avgWpm: number;
   avgAccuracy: number;
   totalSessions: number;
   totalTime: number;
 } {
+  const { clause, params } = punctuationWhere(punctuation);
   const row = db
     .query(
       `SELECT
@@ -82,9 +97,9 @@ export function getAggregateStats(): {
         COALESCE(AVG(accuracy), 0) as avgAccuracy,
         COUNT(*) as totalSessions,
         COALESCE(SUM(duration), 0) as totalTime
-      FROM sessions`
+      FROM sessions ${clause}`
     )
-    .get() as any;
+    .get(...params) as any;
   return {
     avgWpm: Math.round(row.avgWpm * 10) / 10,
     avgAccuracy: Math.round(row.avgAccuracy * 10) / 10,
@@ -93,25 +108,27 @@ export function getAggregateStats(): {
   };
 }
 
-export function getPersonalBests(): { bestWpm: number; bestAccuracy: number } {
+export function getPersonalBests(punctuation?: boolean): { bestWpm: number; bestAccuracy: number } {
+  const { clause, params } = punctuationWhere(punctuation);
   const row = db
     .query(
       `SELECT
         COALESCE(MAX(wpm), 0) as bestWpm,
         COALESCE(MAX(accuracy), 0) as bestAccuracy
-      FROM sessions`
+      FROM sessions ${clause}`
     )
-    .get() as any;
+    .get(...params) as any;
   return {
     bestWpm: Math.round(row.bestWpm * 10) / 10,
     bestAccuracy: Math.round(row.bestAccuracy * 10) / 10,
   };
 }
 
-export function getWpmTrend(limit: number = 30): number[] {
+export function getWpmTrend(limit: number = 30, punctuation?: boolean): number[] {
+  const { clause, params } = punctuationWhere(punctuation);
   const rows = db
-    .query("SELECT wpm FROM sessions ORDER BY created_at DESC LIMIT ?")
-    .all(limit) as { wpm: number }[];
+    .query(`SELECT wpm FROM sessions ${clause} ORDER BY created_at DESC LIMIT ?`)
+    .all(...params, limit) as { wpm: number }[];
   return rows.map((r) => Math.round(r.wpm)).reverse();
 }
 
@@ -131,8 +148,8 @@ export function getPerKeyAccuracy(): KeyAccuracy[] {
       }>;
       for (const event of log) {
         if (event.key === "Backspace" || !event.targetChar) continue;
-        const key = event.targetChar.toLowerCase();
-        if (key.length !== 1 || key < "a" || key > "z") continue;
+        const key = classifyKey(event.targetChar);
+        if (!key) continue;
 
         if (!keyStats.has(key)) keyStats.set(key, { correct: 0, incorrect: 0 });
         const stat = keyStats.get(key)!;

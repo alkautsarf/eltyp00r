@@ -138,6 +138,8 @@ async function sendQuery(prompt: string): Promise<string> {
 }
 
 export function closeAISession() {
+  aiBuffer.length = 0;
+  batchFetchPromise = null;
   if (activeStream) {
     activeStream.close();
     activeStream = null;
@@ -145,14 +147,80 @@ export function closeAISession() {
   }
 }
 
-// --- Public API (unchanged signatures) ---
+// --- AI sentence batch buffer ---
+
+const aiBuffer: string[] = [];
+let batchFetchPromise: Promise<void> | null = null;
+
+function splitIntoChunks(text: string): string[] {
+  const sentences = text.match(/[^.!?]*[.!?]+\s*/g) || [text];
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim();
+    if (!trimmed) continue;
+
+    if (current.length === 0) {
+      current = trimmed;
+    } else if (current.length + 1 + trimmed.length <= 150) {
+      current += " " + trimmed;
+    } else {
+      if (current.length >= 20) chunks.push(current);
+      current = trimmed;
+    }
+  }
+  if (current.length >= 20) chunks.push(current);
+
+  return chunks;
+}
+
+function fetchBatch(kbContext: string, punctuation: boolean): Promise<void> {
+  if (batchFetchPromise) return batchFetchPromise;
+
+  batchFetchPromise = (async () => {
+    try {
+      const casingRule = punctuation
+        ? "- Use proper capitalization (capitalize first letter of sentences)"
+        : "- All lowercase";
+
+      const prompt = `Generate 20-30 natural English sentences for typing practice, approximately 1200 characters total.
+${kbContext ? `The typist struggles with these patterns:\n${kbContext}\n\nIncorporate their problem keys and problem words naturally into the sentences.` : "Generate varied, natural sentences."}
+
+Rules:
+- Output ONLY the sentences, nothing else
+- Use only common punctuation (periods, commas)
+${casingRule}
+- No quotes, no special characters
+- Natural sounding, not contrived
+- Target approximately 1200 characters total`;
+
+      const text = await sendQuery(prompt);
+      if (text && text.length >= 60) {
+        const chunks = splitIntoChunks(text);
+        aiBuffer.push(...chunks);
+      }
+    } finally {
+      batchFetchPromise = null;
+    }
+  })();
+
+  return batchFetchPromise;
+}
+
+export function flushAIBuffer(): void {
+  aiBuffer.length = 0;
+  batchFetchPromise = null;
+}
+
+// --- Public API ---
 
 export async function getWhisper(result: RoundResult, kbContext: string): Promise<string> {
   const problemWordStr = result.problemWords.length > 0
     ? `Problem words this round: ${result.problemWords.slice(0, 10).map((pw) => `"${pw.word}" (${pw.errors} errors)`).join(", ")}.`
     : "";
 
-  const prompt = `Round stats: ${result.wpm} WPM, ${result.accuracy}% accuracy, ${result.errorCount} errors out of ${result.charCount} chars.
+  const prompt = `Round stats: ${result.wpm} WPM, ${result.accuracy}% accuracy, ${result.errorCount} errors out of ${result.charCount} chars.${result.punctuation ? " (punctuation mode)" : ""}
 Problem keys: ${result.problemKeys.length > 0 ? result.problemKeys.join(", ") : "none"}.
 ${problemWordStr}
 ${kbContext ? `Historical context:\n${kbContext}` : "No previous data."}
@@ -163,31 +231,36 @@ Give ONE sentence of coaching advice (15-30 words). Focus on the most impactful 
 }
 
 export async function generateAISentences(kbContext: string, punctuation: boolean = false): Promise<string> {
-  const casingRule = punctuation
-    ? "- Use proper capitalization (capitalize first letter of sentences)"
-    : "- All lowercase";
+  // Serve from buffer if available
+  if (aiBuffer.length > 0) {
+    const chunk = aiBuffer.shift()!;
 
-  const prompt = `Generate 2-3 natural English sentences for typing practice, approximately 120 characters total.
-${kbContext ? `The typist struggles with these patterns:\n${kbContext}\n\nIncorporate their problem keys and problem words naturally into the sentences.` : "Generate varied, natural sentences."}
+    // Background refetch when buffer is running low
+    if (aiBuffer.length <= 2) {
+      fetchBatch(kbContext, punctuation).catch(() => {});
+    }
 
-Rules:
-- Output ONLY the sentences, nothing else
-- Use only common punctuation (periods, commas)
-${casingRule}
-- No quotes, no special characters
-- Natural sounding, not contrived
-- Target approximately 120 characters total`;
+    return chunk;
+  }
 
-  return sendQuery(prompt);
+  // Buffer empty: fetch a new batch and return the first chunk
+  await fetchBatch(kbContext, punctuation);
+
+  if (aiBuffer.length > 0) {
+    return aiBuffer.shift()!;
+  }
+
+  return "";
 }
 
 export async function getNarrative(
   aggregateStats: { avgWpm: number; avgAccuracy: number; totalSessions: number; totalTime: number },
-  kbContext: string
+  kbContext: string,
+  filterLabel?: string
 ): Promise<string> {
   const totalMins = Math.round(aggregateStats.totalTime / 60000);
 
-  const prompt = `User typing profile:
+  const prompt = `User typing profile${filterLabel ? ` (${filterLabel})` : ""}:
 - Average WPM: ${aggregateStats.avgWpm}
 - Average accuracy: ${aggregateStats.avgAccuracy}%
 - Total sessions: ${aggregateStats.totalSessions}
@@ -197,4 +270,53 @@ ${kbContext ? `\nHistorical data:\n${kbContext}` : ""}
 Write 2-3 sentences analyzing their typing progress. Be specific about what's working and what to focus on. End with one actionable suggestion. No preamble.`;
 
   return sendQuery(prompt);
+}
+
+type StatsInput = { avgWpm: number; avgAccuracy: number; totalSessions: number; totalTime: number };
+
+function formatStats(label: string, s: StatsInput): string {
+  const mins = Math.round(s.totalTime / 60000);
+  return `${label}: ${s.avgWpm} avg WPM, ${s.avgAccuracy}% accuracy, ${s.totalSessions} sessions, ${mins}min practice`;
+}
+
+export async function getAllNarratives(
+  allStats: StatsInput | null,
+  noPunctStats: StatsInput | null,
+  punctStats: StatsInput | null,
+  kbContext: string
+): Promise<{ all?: string; noPunct?: string; punct?: string }> {
+  const sections: string[] = [];
+  if (allStats && allStats.totalSessions >= 3) sections.push(formatStats("All sessions", allStats));
+  if (noPunctStats && noPunctStats.totalSessions >= 3) sections.push(formatStats("Non-punctuation sessions", noPunctStats));
+  if (punctStats && punctStats.totalSessions >= 3) sections.push(formatStats("Punctuation sessions", punctStats));
+
+  if (sections.length === 0) return {};
+
+  const prompt = `User typing profile with multiple views:
+${sections.join("\n")}
+${kbContext ? `\nHistorical data:\n${kbContext}` : ""}
+
+For EACH view listed above, write 2-3 sentences analyzing their typing in that mode. Be specific about what's working and what to focus on. End each with one actionable suggestion.
+
+Format your response EXACTLY like this (include the markers):
+${allStats && allStats.totalSessions >= 3 ? "[ALL]\n<insight for all sessions>\n" : ""}${noPunctStats && noPunctStats.totalSessions >= 3 ? "[NO_PUNCT]\n<insight for non-punctuation>\n" : ""}${punctStats && punctStats.totalSessions >= 3 ? "[PUNCT]\n<insight for punctuation>" : ""}
+
+No preamble before the first marker. Just the markers and insights.`;
+
+  const text = await sendQuery(prompt);
+  if (!text) return {};
+
+  const result: { all?: string; noPunct?: string; punct?: string } = {};
+  const markerMap: Record<string, keyof typeof result> = { ALL: "all", NO_PUNCT: "noPunct", PUNCT: "punct" };
+
+  // Split by markers in a single pass — order-independent
+  const parts = text.split(/\[(ALL|NO_PUNCT|PUNCT)\]\s*/);
+  // parts alternates: [preamble, marker, content, marker, content, ...]
+  for (let i = 1; i < parts.length - 1; i += 2) {
+    const key = markerMap[parts[i]];
+    const content = parts[i + 1]?.trim();
+    if (key && content) result[key] = content;
+  }
+
+  return result;
 }

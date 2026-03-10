@@ -4,6 +4,29 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-03-10
+
+### Added
+
+- Separate stats tracking for punctuation vs non-punctuation sessions (profile filter with `f` key)
+- Per-key accuracy tracking for punctuation characters (`.` `,` `?`) and shift coordination (`Aa`)
+- Batch AI sentence generation (10 rounds per API call) for near-zero loading in Claude mode
+- All three Claude Insights fetched in a single API call for instant profile filter switching
+- Punctuation mode context in whisper coaching
+
+### Changed
+
+- Personal bests now tracked separately per punctuation mode
+- Profile screen shows filter indicator with `[f]` cycle hint
+- Punctuation/shift accuracy row hidden in "no punctuation" profile view
+- Shared `classifyKey` and `computeKeyAccuracies` utilities to deduplicate key analysis logic
+- Cached key accuracies at round start to avoid DB calls during timed mode text extension
+
+### Fixed
+
+- AI text generation stalling after buffer drain (race condition with in-flight fetch guard)
+- Stale narrative text persisting when switching to a filter with no sessions
+
 ## [0.3.3] - 2026-03-07
 
 ### Fixed
@@ -117,6 +140,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.4.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.0
 [0.3.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.3
 [0.3.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.2
 [0.3.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.1

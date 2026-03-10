@@ -4,12 +4,13 @@ import type { KeyAccuracy } from "../types";
 
 interface ProfileScreenProps {
   narrative: string | null;
+  punctuationFilter?: boolean;
 }
 
-export function ProfileScreen({ narrative }: ProfileScreenProps) {
-  const stats = getAggregateStats();
-  const bests = getPersonalBests();
-  const wpmTrend = getWpmTrend();
+export function ProfileScreen({ narrative, punctuationFilter }: ProfileScreenProps) {
+  const stats = getAggregateStats(punctuationFilter);
+  const bests = getPersonalBests(punctuationFilter);
+  const wpmTrend = getWpmTrend(30, punctuationFilter);
   const keyAccuracies = getPerKeyAccuracy();
 
   const totalMins = Math.floor(stats.totalTime / 60000);
@@ -17,11 +18,18 @@ export function ProfileScreen({ narrative }: ProfileScreenProps) {
   const mins = totalMins % 60;
   const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 
+  const filterLabel = punctuationFilter === undefined
+    ? "all sessions"
+    : punctuationFilter
+      ? "punctuation only"
+      : "no punctuation";
+
   return (
     <box style={{ flexDirection: "column", width: "100%", height: "100%", justifyContent: "center", alignItems: "center" }}>
       <box style={{ flexDirection: "column", alignItems: "center" }}>
         {/* Title */}
         <text fg={theme.fg}>Your Typing DNA</text>
+        <text fg={theme.fgDim}>{filterLabel} [f]</text>
         <text />
 
         {/* Stats + Bests row */}
@@ -82,7 +90,7 @@ export function ProfileScreen({ narrative }: ProfileScreenProps) {
         {keyAccuracies.length > 0 && (
           <box style={{ flexDirection: "column", paddingTop: 1 }}>
             <text fg={theme.fgFaint}>Per-Key Accuracy</text>
-            <KeyGrid keyAccuracies={keyAccuracies} />
+            <KeyGrid keyAccuracies={keyAccuracies} showExtras={punctuationFilter !== false} />
           </box>
         )}
 
@@ -123,7 +131,14 @@ function accuracyColor(accuracy: number): string {
   return theme.red;
 }
 
-function KeyGrid({ keyAccuracies }: { keyAccuracies: KeyAccuracy[] }) {
+const EXTRA_KEYS: { key: string; label: string }[] = [
+  { key: ".", label: "." },
+  { key: ",", label: "," },
+  { key: "?", label: "?" },
+  { key: "Shift", label: "Aa" },
+];
+
+function KeyGrid({ keyAccuracies, showExtras }: { keyAccuracies: KeyAccuracy[]; showExtras: boolean }) {
   const keyMap = new Map(keyAccuracies.map((ka) => [ka.key, ka]));
   const letters = "abcdefghijklmnopqrstuvwxyz".split("");
   const cols = 9;
@@ -132,6 +147,8 @@ function KeyGrid({ keyAccuracies }: { keyAccuracies: KeyAccuracy[] }) {
   for (let i = 0; i < letters.length; i += cols) {
     rows.push(letters.slice(i, i + cols));
   }
+
+  const hasExtraData = showExtras && EXTRA_KEYS.some((ek) => keyMap.has(ek.key));
 
   return (
     <box style={{ flexDirection: "column", gap: 0 }}>
@@ -155,6 +172,26 @@ function KeyGrid({ keyAccuracies }: { keyAccuracies: KeyAccuracy[] }) {
           })}
         </text>
       ))}
+      {hasExtraData && (
+        <text>
+          {EXTRA_KEYS.map((ek) => {
+            const ka = keyMap.get(ek.key);
+            if (!ka) {
+              return (
+                <span key={ek.key} fg={theme.fgDim}>
+                  {ek.label.padStart(2)} --
+                </span>
+              );
+            }
+            const pct = ka.accuracy.toString().padStart(2, " ");
+            return (
+              <span key={ek.key} fg={accuracyColor(ka.accuracy)}>
+                {ek.label.padStart(2)} {pct}% {" "}
+              </span>
+            );
+          })}
+        </text>
+      )}
     </box>
   );
 }

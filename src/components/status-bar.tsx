@@ -12,7 +12,7 @@ export function StatusBar({ screen, isTypingActive, aiEnabled }: StatusBarProps)
   const hints: Record<Screen, string> = {
     typing: `${modeRange} mode  \` punct  tab profile  esc quit`,
     results: "n next  q quit  p profile",
-    profile: "tab back  n new round  q quit",
+    profile: "tab back  f filter  n new round  q quit",
   };
   const hint = screen === "typing" && isTypingActive
     ? "tab restart  esc quit"
