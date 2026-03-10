@@ -180,17 +180,16 @@ function fetchBatch(kbContext: string, punctuation: boolean): Promise<void> {
 
   batchFetchPromise = (async () => {
     try {
-      const casingRule = punctuation
-        ? "- Use proper capitalization (capitalize first letter of sentences)"
-        : "- All lowercase";
+      const punctRules = punctuation
+        ? "- Use only common punctuation (periods, commas)\n- Use proper capitalization (capitalize first letter of sentences)"
+        : "- No punctuation at all (no periods, commas, or any punctuation marks)\n- All lowercase";
 
       const prompt = `Generate 20-30 natural English sentences for typing practice, approximately 1200 characters total.
 ${kbContext ? `The typist struggles with these patterns:\n${kbContext}\n\nIncorporate their problem keys and problem words naturally into the sentences.` : "Generate varied, natural sentences."}
 
 Rules:
 - Output ONLY the sentences, nothing else
-- Use only common punctuation (periods, commas)
-${casingRule}
+${punctRules}
 - No quotes, no special characters
 - Natural sounding, not contrived
 - Target approximately 1200 characters total`;
