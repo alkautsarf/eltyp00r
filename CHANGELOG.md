@@ -4,6 +4,12 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.2] - 2026-03-10
+
+### Fixed
+
+- Claude mode showing entire 1200-char batch as one round when punctuation is off (no sentence boundaries to split on)
+
 ## [0.4.1] - 2026-03-10
 
 ### Fixed
@@ -146,6 +152,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.4.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.2
 [0.4.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.1
 [0.4.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.0
 [0.3.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.3.3

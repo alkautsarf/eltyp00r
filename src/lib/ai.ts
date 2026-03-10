@@ -153,25 +153,44 @@ const aiBuffer: string[] = [];
 let batchFetchPromise: Promise<void> | null = null;
 
 function splitIntoChunks(text: string): string[] {
-  const sentences = text.match(/[^.!?]*[.!?]+\s*/g) || [text];
+  // Try splitting by sentence boundaries first
+  const sentences = text.match(/[^.!?]*[.!?]+\s*/g);
+
+  if (sentences && sentences.length > 1) {
+    // Greedily combine sentences into ~120-150 char chunks
+    const chunks: string[] = [];
+    let current = "";
+    for (const sentence of sentences) {
+      const trimmed = sentence.trim();
+      if (!trimmed) continue;
+      if (current.length === 0) {
+        current = trimmed;
+      } else if (current.length + 1 + trimmed.length <= 150) {
+        current += " " + trimmed;
+      } else {
+        if (current.length >= 20) chunks.push(current);
+        current = trimmed;
+      }
+    }
+    if (current.length >= 20) chunks.push(current);
+    return chunks;
+  }
+
+  // No sentence boundaries (e.g., no punctuation mode) — split by words into ~120 char chunks
+  const words = text.split(/\s+/).filter(Boolean);
   const chunks: string[] = [];
   let current = "";
-
-  for (const sentence of sentences) {
-    const trimmed = sentence.trim();
-    if (!trimmed) continue;
-
+  for (const word of words) {
     if (current.length === 0) {
-      current = trimmed;
-    } else if (current.length + 1 + trimmed.length <= 150) {
-      current += " " + trimmed;
+      current = word;
+    } else if (current.length + 1 + word.length <= 130) {
+      current += " " + word;
     } else {
       if (current.length >= 20) chunks.push(current);
-      current = trimmed;
+      current = word;
     }
   }
   if (current.length >= 20) chunks.push(current);
-
   return chunks;
 }
 
