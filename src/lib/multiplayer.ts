@@ -8,6 +8,7 @@ type EventMap = {
   opponent_finish: { playerId: string; wpm: number; accuracy: number; duration: number };
   race_end: { results: Array<{ playerId: string; name: string; wpm: number; accuracy: number; duration: number; rank: number }> };
   player_left: { playerId: string; name: string };
+  host_transfer: Record<string, never>;
   error: { message: string };
   disconnected: Record<string, never>;
 };
@@ -34,6 +35,14 @@ export class MultiplayerClient {
 
   joinRoom(code: string): void {
     this.connect(code);
+  }
+
+  sendStart(): void {
+    this.send({ type: "start" });
+  }
+
+  sendSetPunctuation(value: boolean): void {
+    this.send({ type: "set_punctuation", value });
   }
 
   sendProgress(cursor: number, wpm: number): void {

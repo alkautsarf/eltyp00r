@@ -9,11 +9,10 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ screen, isTypingActive, aiEnabled, isMultiplayer }: StatusBarProps) {
-  const modeRange = aiEnabled ? "1-5" : "1-4";
   const hints: Record<Screen, string> = {
     typing: isMultiplayer
       ? "esc quit"
-      : `${modeRange} mode  m 1v1  \` punct  tab profile  esc quit`,
+      : "1-6 mode  ` punct  tab profile  esc quit",
     results: isMultiplayer
       ? "b solo  esc quit"
       : "n next  q quit  p profile",
@@ -34,9 +33,9 @@ export function StatusBar({ screen, isTypingActive, aiEnabled, isMultiplayer }: 
         paddingRight: 1,
       }}
     >
-      <text fg={theme.fgDim}>{hint}</text>
+      <text fg={theme.fgFaint}>{hint}</text>
       <box style={{ flexGrow: 1 }} />
-      <text fg={theme.fgDim}>eltyp00r</text>
+      <text fg={theme.fgFaint}>eltyp00r</text>
     </box>
   );
 }

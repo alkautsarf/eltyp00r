@@ -4,7 +4,7 @@ Terminal typing trainer with adaptive difficulty and AI coaching. Built with [Op
 
 ## Features
 
-- **Multiplayer** -- Real-time 1v1 racing with room codes, live opponent progress, and rematch
+- **Multiplayer** -- Real-time racing (up to 4 players) with room codes, host controls, punctuation toggle, and auto-continue
 - **Game modes** -- Normal, timed 30s, timed 60s, warm-up (heavy weak-key bias), and Claude (AI-generated sentences targeting your weaknesses)
 - **Adaptive word selection** -- Tracks per-key accuracy across sessions and biases word generation toward your weak keys
 - **keybr-style typing model** -- Sticky cursor that doesn't advance on errors, forcing you to hit the correct key before moving on
@@ -59,16 +59,17 @@ eltyp00r --name elpabl0     # set your multiplayer display name
 
 | Screen  | Key       | Action                  |
 |---------|-----------|-------------------------|
-| Typing  | 1-4       | Switch mode             |
-| Typing  | 5         | Claude mode (AI)        |
-| Typing  | m         | Multiplayer lobby       |
+| Typing  | 1-5       | Switch mode             |
+| Typing  | 6         | Multiplayer lobby       |
 | Typing  | `` ` ``   | Toggle punctuation      |
 | Typing  | tab       | Go to profile / restart |
 | Typing  | esc       | Quit                    |
 | Lobby   | c         | Create room             |
 | Lobby   | j         | Join room               |
+| Lobby   | s         | Start race (host)       |
+| Lobby   | `` ` ``   | Toggle punctuation (host)|
 | Lobby   | esc       | Back                    |
-| Results | n         | Next round / rematch    |
+| Results | n         | Next round              |
 | Results | q         | Quit                    |
 | Results | p / b     | Profile / back to solo  |
 | Profile | tab       | Back to typing          |

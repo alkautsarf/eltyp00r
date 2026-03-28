@@ -116,13 +116,14 @@ export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, is
         <box style={{ flexDirection: "column", alignItems: "center" }}>
           <text fg={theme.fgFaint}>Race Results</text>
           {raceResults.map((r) => {
+            const rankLabel = ["1st", "2nd", "3rd", "4th"][r.rank - 1] || `${r.rank}th`;
             const rankColor = r.rank === 1 ? theme.yellow : theme.fgFaint;
             const durationSec = Math.round(r.duration / 1000);
             const m = Math.floor(durationSec / 60);
             const s = durationSec % 60;
             return (
               <text key={r.playerId}>
-                <span fg={rankColor}>{r.rank === 1 ? "1st" : "2nd"}</span>
+                <span fg={rankColor}>{rankLabel.padEnd(3)}</span>
                 <span fg={theme.fg}>{"  "}{r.name.padEnd(14).slice(0, 14)}</span>
                 <span fg={theme.green}>{String(r.wpm).padStart(3)} wpm</span>
                 <span fg={theme.cyan}>{"  "}{r.accuracy.toFixed(1).padStart(5)}%</span>

@@ -277,6 +277,10 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
           return;
         }
       }
+      if (lobbyState.phase === "waiting" && lobbyState.isHost) {
+        if (key.name === "s") { multiplayer.startGame(); return; }
+        if (key.name === "`") { multiplayer.togglePunctuation(); return; }
+      }
       if (lobbyState.phase === "error") {
         multiplayer.dismissError();
       }
@@ -307,7 +311,7 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
           if (gameMode === "ai") preGenerateAIText();
           return;
         }
-        if (key.name === "m") {
+        if (key.name === "6") {
           setGameMode("multiplayer");
           setScreen("lobby");
           setRoundNumber(0);

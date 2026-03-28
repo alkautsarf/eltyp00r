@@ -4,6 +4,23 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0] - 2026-03-28
+
+### Added
+
+- N-player multiplayer support (up to 4 players per room)
+- Host controls: room creator starts the race and toggles settings
+- Punctuation mode in multiplayer (host toggles with backtick, server generates punctuated text)
+- Player list in lobby showing all connected players
+- Host transfer when original host disconnects
+
+### Changed
+
+- Multiplayer hotkey changed from `m` to `6` (fixes conflict with typing text starting with 'm')
+- Mode selector now shows `6 1v1` inline with other modes (1-5)
+- Status bar uses brighter color for better visibility
+- Results screen supports 1st/2nd/3rd/4th rank labels
+
 ## [0.5.1] - 2026-03-28
 
 ### Fixed
@@ -187,6 +204,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.6.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.0
 [0.5.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.5.1
 [0.5.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.5.0
 [0.4.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.3

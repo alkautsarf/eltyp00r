@@ -27,18 +27,22 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
   useEffect(() => {
     const client = getClient();
 
-    const onRoomCreated = (data: { code: string; playerId: string }) => {
+    const onRoomCreated = (data: { code: string; playerId: string; isHost?: boolean }) => {
       playerIdRef.current = data.playerId;
       setPlayerId(data.playerId);
-      setLobbyState({ phase: "waiting", code: data.code });
+      setLobbyState({ phase: "waiting", code: data.code, players: [], isHost: !!data.isHost, punctuation: false });
     };
 
-    const onLobby = (data: { players: Array<{ id: string; name: string }> }) => {
+    const onLobby = (data: { players: Array<{ id: string; name: string }>; punctuation?: boolean }) => {
       setOpponents(
         data.players
           .filter((p) => p.id !== playerIdRef.current)
           .map((p) => ({ playerId: p.id, name: p.name, cursor: 0, wpm: 0, finished: false }))
       );
+      setLobbyState((prev) => {
+        if (prev.phase !== "waiting") return prev;
+        return { ...prev, players: data.players, punctuation: data.punctuation ?? prev.punctuation };
+      });
     };
 
     const onRaceStart = (data: { text: string }) => {
@@ -79,6 +83,13 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
       setOpponents((prev) => prev.filter((o) => o.playerId !== data.playerId));
     };
 
+    const onHostTransfer = () => {
+      setLobbyState((prev) => {
+        if (prev.phase !== "waiting") return prev;
+        return { ...prev, isHost: true };
+      });
+    };
+
     const onError = (data: { message: string }) => {
       setLobbyState({ phase: "error", message: data.message });
     };
@@ -98,6 +109,7 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
     client.on("opponent_finish", onOpponentFinish);
     client.on("race_end", onRaceEnd);
     client.on("player_left", onPlayerLeft);
+    client.on("host_transfer", onHostTransfer);
     client.on("error", onError);
     client.on("disconnected", onDisconnected);
 
@@ -109,6 +121,7 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
       client.off("opponent_finish", onOpponentFinish);
       client.off("race_end", onRaceEnd);
       client.off("player_left", onPlayerLeft);
+      client.off("host_transfer", onHostTransfer);
       client.off("error", onError);
       client.off("disconnected", onDisconnected);
     };
@@ -137,6 +150,16 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
   const dismissError = useCallback(() => {
     setLobbyState({ phase: "idle" });
   }, []);
+
+  const startGame = useCallback(() => {
+    clientRef.current?.sendStart();
+  }, []);
+
+  const togglePunctuation = useCallback(() => {
+    clientRef.current?.sendSetPunctuation(
+      !(lobbyState.phase === "waiting" && lobbyState.punctuation)
+    );
+  }, [lobbyState]);
 
   const sendProgress = useCallback((cursor: number, wpm: number) => {
     clientRef.current?.sendProgress(cursor, wpm);
@@ -167,6 +190,8 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
     startJoining,
     updateCodeInput,
     dismissError,
+    startGame,
+    togglePunctuation,
     sendProgress,
     sendFinish,
     leave,

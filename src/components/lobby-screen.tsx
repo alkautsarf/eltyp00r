@@ -39,7 +39,7 @@ export function LobbyScreen({ lobbyState, playerName }: LobbyScreenProps) {
         )}
 
         {lobbyState.phase === "creating" && (
-          <text fg={theme.fgFaint}>Creating room...</text>
+          <text fg={theme.fgFaint}>Connecting...</text>
         )}
 
         {lobbyState.phase === "waiting" && (
@@ -50,9 +50,27 @@ export function LobbyScreen({ lobbyState, playerName }: LobbyScreenProps) {
               <b>  {lobbyState.code.split("").join(" ")}  </b>
             </text>
             <text />
-            <text fg={theme.fgFaint}>Waiting for opponent...</text>
+            <text fg={theme.fgFaint}>Players ({lobbyState.players.length}/4)</text>
+            {lobbyState.players.map((p) => (
+              <text key={p.id} fg={p.name === playerName ? theme.cyan : theme.fg}>
+                {"  "}{p.name}{p.name === playerName && lobbyState.isHost ? " (host)" : ""}
+              </text>
+            ))}
             <text />
-            <text fg={theme.fgDim}>[esc] cancel</text>
+            {lobbyState.isHost ? (
+              <box style={{ flexDirection: "row", gap: 2 }}>
+                <text>
+                  <span fg={lobbyState.punctuation ? theme.yellow : theme.fgDim}>` .Aa</span>
+                </text>
+                <text>
+                  <span fg={lobbyState.players.length >= 2 ? theme.yellow : theme.fgDim}>[s]</span>
+                  <span fg={theme.fgFaint}> start</span>
+                </text>
+                <text fg={theme.fgDim}>[esc] cancel</text>
+              </box>
+            ) : (
+              <text fg={theme.fgFaint}>Waiting for host to start...</text>
+            )}
           </>
         )}
 
@@ -65,8 +83,6 @@ export function LobbyScreen({ lobbyState, playerName }: LobbyScreenProps) {
             <text fg={theme.fgDim}>[esc] cancel</text>
           </>
         )}
-
-
 
         {lobbyState.phase === "error" && (
           <>

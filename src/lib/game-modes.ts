@@ -66,4 +66,5 @@ export const MODE_HOTKEYS: Record<string, GameMode> = {
   "3": "timed60",
   "4": "warmup",
   "5": "ai",
+  "6": "multiplayer",
 };

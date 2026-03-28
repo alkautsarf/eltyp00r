@@ -64,7 +64,7 @@ export interface OpponentState {
 export type LobbyState =
   | { phase: "idle" }
   | { phase: "creating" }
-  | { phase: "waiting"; code: string }
+  | { phase: "waiting"; code: string; players: Array<{ id: string; name: string }>; isHost: boolean; punctuation: boolean }
   | { phase: "joining"; codeInput: string }
   | { phase: "error"; message: string };
 
