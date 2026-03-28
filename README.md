@@ -24,17 +24,17 @@ Terminal typing trainer with adaptive difficulty and AI coaching. Built with [Op
 
 ## Install
 
-### Homebrew (macOS Apple Silicon)
+### Quick install (macOS / Linux)
+
+```bash
+curl -sfL https://raw.githubusercontent.com/alkautsarf/eltyp00r/main/install.sh | sh
+```
+
+### Homebrew (macOS / Linux)
 
 ```bash
 brew tap alkautsarf/tap
 brew install eltyp00r
-```
-
-Then run:
-
-```bash
-eltyp00r
 ```
 
 ### From source

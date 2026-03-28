@@ -76,11 +76,13 @@ jobs:
           TAG=${GITHUB_REF#refs/tags/}
           VERSION=${TAG#v}
 
-          # Download the darwin-arm64 tarball and compute SHA
+          # Download tarballs and compute SHAs
           gh release download "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
-            --pattern "eltyp00r-${TAG}-darwin-arm64.tar.gz"
-          SHA256=$(shasum -a 256 eltyp00r-${TAG}-darwin-arm64.tar.gz | cut -d' ' -f1)
+            --pattern "eltyp00r-${TAG}-darwin-arm64.tar.gz" \
+            --pattern "eltyp00r-${TAG}-linux-x64.tar.gz"
+          SHA256_DARWIN=$(shasum -a 256 eltyp00r-${TAG}-darwin-arm64.tar.gz | cut -d' ' -f1)
+          SHA256_LINUX=$(shasum -a 256 eltyp00r-${TAG}-linux-x64.tar.gz | cut -d' ' -f1)
 
           # Clone tap repo
           git clone https://x-access-token:${GH_TOKEN}@github.com/alkautsarf/homebrew-tap.git tap
@@ -96,13 +98,22 @@ jobs:
             on_macos do
               on_arm do
                 url "https://github.com/alkautsarf/eltyp00r/releases/download/${TAG}/eltyp00r-${TAG}-darwin-arm64.tar.gz"
-                sha256 "${SHA256}"
+                sha256 "${SHA256_DARWIN}"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "https://github.com/alkautsarf/eltyp00r/releases/download/${TAG}/eltyp00r-${TAG}-linux-x64.tar.gz"
+                sha256 "${SHA256_LINUX}"
               end
             end
 
             def install
-              if Hardware::CPU.arm?
+              if OS.mac? && Hardware::CPU.arm?
                 bin.install "eltyp00r-darwin-arm64" => "eltyp00r"
+              elsif OS.linux? && Hardware::CPU.intel?
+                bin.install "eltyp00r-linux-x64" => "eltyp00r"
               end
             end
 

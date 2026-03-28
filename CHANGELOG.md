@@ -4,6 +4,13 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.3] - 2026-03-28
+
+### Added
+
+- Universal install script (`curl | sh`) for macOS and Linux
+- Linux x64 support in Homebrew formula
+
 ## [0.4.2] - 2026-03-10
 
 ### Fixed
@@ -152,6 +159,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.4.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.3
 [0.4.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.2
 [0.4.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.1
 [0.4.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.0
