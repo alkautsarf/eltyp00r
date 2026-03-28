@@ -94,7 +94,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
   useEffect(() => {
     const config = GAME_MODE_CONFIGS[gameMode];
 
-    if (gameMode === "ai") {
+    if (gameMode === "ai" || gameMode === "multiplayer") {
       const aiText = getInitialText?.();
       if (aiText && aiText.length >= 20) {
         initWithText(aiText);
@@ -249,7 +249,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
 
         // Timed modes: extend text when nearing end
         const config = GAME_MODE_CONFIGS[gameMode];
-        if (config.timeLimitMs !== null && next.length - newIdx < 50) {
+        if (config.timeLimitMs !== null && gameMode !== "multiplayer" && next.length - newIdx < 50) {
           const rawMore = generateRoundText(200, cachedKeyAccuraciesRef.current);
           const moreText = " " + (punctuation ? applyPunctuation(rawMore) : rawMore);
           const moreChars: TypedChar[] = moreText.split("").map((char) => ({
@@ -292,6 +292,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
     isActive,
     isComplete,
     isLoading,
+    cursorIndex,
     correctCount: correctCountRef.current,
     totalTyped: totalTypedRef.current,
     progress,

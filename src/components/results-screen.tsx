@@ -1,5 +1,5 @@
 import { theme } from "../theme";
-import type { RoundResult } from "../types";
+import type { RoundResult, RaceResult } from "../types";
 import { GAME_MODE_CONFIGS } from "../lib/game-modes";
 
 interface ResultsScreenProps {
@@ -8,6 +8,9 @@ interface ResultsScreenProps {
   whisperText?: string | null;
   isNewPbWpm?: boolean;
   isNewPbAccuracy?: boolean;
+  isMultiplayer?: boolean;
+  raceResults?: RaceResult[] | null;
+  rematchRequested?: boolean;
 }
 
 function getHeaderText(config: { label: string; timeLimitMs: number | null }, isWarmup: boolean): string {
@@ -22,7 +25,7 @@ function getDeltaColor(delta: number): string {
   return theme.fgFaint;
 }
 
-export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, isNewPbAccuracy }: ResultsScreenProps) {
+export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, isNewPbAccuracy, isMultiplayer, raceResults, rematchRequested }: ResultsScreenProps) {
   const config = GAME_MODE_CONFIGS[result.gameMode];
   const isWarmup = result.gameMode === "warmup";
   const delta = previousWpm !== null ? result.wpm - previousWpm : null;
@@ -109,8 +112,34 @@ export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, is
 
       <text />
 
+      {/* Race leaderboard */}
+      {isMultiplayer && raceResults && (
+        <box style={{ flexDirection: "column", alignItems: "center" }}>
+          <text fg={theme.fgFaint}>Race Results</text>
+          {raceResults.map((r) => {
+            const rankColor = r.rank === 1 ? theme.yellow : theme.fgFaint;
+            const durationSec = Math.round(r.duration / 1000);
+            const m = Math.floor(durationSec / 60);
+            const s = durationSec % 60;
+            return (
+              <text key={r.playerId}>
+                <span fg={rankColor}>{r.rank === 1 ? "1st" : "2nd"}</span>
+                <span fg={theme.fg}>{"  "}{r.name.padEnd(14).slice(0, 14)}</span>
+                <span fg={theme.green}>{String(r.wpm).padStart(3)} wpm</span>
+                <span fg={theme.cyan}>{"  "}{r.accuracy.toFixed(1).padStart(5)}%</span>
+                <span fg={theme.fgFaint}>{"  "}{m}:{s.toString().padStart(2, "0")}</span>
+              </text>
+            );
+          })}
+        </box>
+      )}
+
+      {isMultiplayer && !raceResults && (
+        <text fg={theme.fgFaint}>Waiting for opponent to finish...</text>
+      )}
+
       {/* AI Whisper */}
-      {whisperText && (
+      {!isMultiplayer && whisperText && (
         <box style={{ flexDirection: "row", justifyContent: "center" }}>
           <box
             style={{
@@ -128,20 +157,37 @@ export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, is
 
       {/* Actions */}
       <text />
-      <box style={{ flexDirection: "row", gap: 3, justifyContent: "center" }}>
-        <text>
-          <span fg={theme.yellow}>[n]</span>
-          <span fg={theme.fgFaint}> next round</span>
-        </text>
-        <text>
-          <span fg={theme.yellow}>[q]</span>
-          <span fg={theme.fgFaint}> quit</span>
-        </text>
-        <text>
-          <span fg={theme.yellow}>[p]</span>
-          <span fg={theme.fgFaint}> profile</span>
-        </text>
-      </box>
+      {isMultiplayer ? (
+        <box style={{ flexDirection: "row", gap: 3, justifyContent: "center" }}>
+          <text>
+            <span fg={theme.yellow}>[n]</span>
+            <span fg={theme.fgFaint}> rematch{rematchRequested ? " (opponent ready)" : ""}</span>
+          </text>
+          <text>
+            <span fg={theme.yellow}>[b]</span>
+            <span fg={theme.fgFaint}> back to solo</span>
+          </text>
+          <text>
+            <span fg={theme.yellow}>[esc]</span>
+            <span fg={theme.fgFaint}> quit</span>
+          </text>
+        </box>
+      ) : (
+        <box style={{ flexDirection: "row", gap: 3, justifyContent: "center" }}>
+          <text>
+            <span fg={theme.yellow}>[n]</span>
+            <span fg={theme.fgFaint}> next round</span>
+          </text>
+          <text>
+            <span fg={theme.yellow}>[q]</span>
+            <span fg={theme.fgFaint}> quit</span>
+          </text>
+          <text>
+            <span fg={theme.yellow}>[p]</span>
+            <span fg={theme.fgFaint}> profile</span>
+          </text>
+        </box>
+      )}
       </box>
     </box>
   );

@@ -4,9 +4,11 @@ import type { Screen, RoundResult, GameMode } from "./types";
 import { TypingScreen } from "./components/typing-screen";
 import { ResultsScreen } from "./components/results-screen";
 import { ProfileScreen } from "./components/profile-screen";
+import { LobbyScreen } from "./components/lobby-screen";
 import { StatusBar } from "./components/status-bar";
 import { useTypingSession } from "./hooks/use-typing-session";
 import { useStats } from "./hooks/use-stats";
+import { useMultiplayer } from "./hooks/use-multiplayer";
 import { saveSession, updateGoalProgress, getPersonalBests, getAggregateStats } from "./lib/db";
 import { updateKBFromRound, getKBContext } from "./lib/kb";
 import { getWhisper, getAllNarratives, generateAISentences, closeAISession, flushAIBuffer } from "./lib/ai";
@@ -17,7 +19,7 @@ function filterCacheKey(filter: boolean | undefined): NarrativeCacheKey {
   return filter === undefined ? "all" : filter ? "punct" : "noPunct";
 }
 
-export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
+export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { aiEnabled?: boolean; playerName?: string; serverUrl?: string }) {
   const renderer = useRenderer();
   const [screen, setScreen] = useState<Screen>("typing");
   const [roundNumber, setRoundNumber] = useState(1);
@@ -36,6 +38,8 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
   const narrativeStaleRef = useRef(true);
   const aiTextRef = useRef<string | null>(null);
   const [profileFilter, setProfileFilter] = useState<boolean | undefined>(undefined);
+  const multiplayer = useMultiplayer({ playerName: playerName!, serverUrl });
+  const multiplayerActive = gameMode === "multiplayer";
 
   const preGenerateAIText = useCallback(() => {
     if (!aiEnabled) return;
@@ -51,13 +55,20 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
   // AI text pre-generation only fires when switching to AI mode or after an AI round.
 
   const getInitialText = useCallback(() => {
+    if (gameMode === "multiplayer") {
+      return multiplayer.raceText;
+    }
     const text = aiTextRef.current;
     aiTextRef.current = null;
     return text;
-  }, []);
+  }, [gameMode, multiplayer.raceText]);
 
   const handleRoundComplete = useCallback((result: RoundResult) => {
     const config = GAME_MODE_CONFIGS[result.gameMode];
+
+    if (result.gameMode === "multiplayer") {
+      multiplayer.sendFinish(result.wpm, result.accuracy, result.duration, result.errorCount, result.charCount);
+    }
 
     if (config.savesToDb) {
       // Check PBs before saving so current round isn't included
@@ -125,6 +136,28 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
     }
   }, [stats.timeExpired]);
 
+  // Multiplayer: report progress to server
+  useEffect(() => {
+    if (multiplayerActive && session.isActive) {
+      multiplayer.sendProgress(session.cursorIndex, stats.wpm);
+    }
+  }, [multiplayerActive, session.isActive, session.cursorIndex, stats.wpm]);
+
+  // Multiplayer: transition from countdown to typing when race starts
+  useEffect(() => {
+    if (multiplayerActive && multiplayer.raceText && screen === "lobby") {
+      setScreen("typing");
+      setRoundNumber((n) => n + 1);
+    }
+  }, [multiplayerActive, multiplayer.raceText, screen]);
+
+  // Multiplayer: handle rematch start (new countdown → new race text)
+  useEffect(() => {
+    if (multiplayerActive && multiplayer.lobbyState.phase === "countdown" && screen === "results") {
+      setScreen("lobby");
+    }
+  }, [multiplayerActive, multiplayer.lobbyState.phase, screen]);
+
   const startNextRound = useCallback(() => {
     if (currentResult) {
       setPreviousWpm(currentResult.wpm);
@@ -172,6 +205,12 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
     setNarrativeText(narrativeCacheRef.current.get(filterCacheKey(next)) || null);
   }, [profileFilter]);
 
+  const leaveMultiplayer = useCallback(() => {
+    multiplayer.leave();
+    setGameMode("normal");
+    setScreen("typing");
+  }, [multiplayer]);
+
   const quit = useCallback(() => {
     if (aiEnabled) closeAISession();
     renderer.destroy();
@@ -186,9 +225,43 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
       return;
     }
 
+    if (screen === "lobby") {
+      if (key.name === "escape" || (key.ctrl && key.name === "c")) {
+        leaveMultiplayer();
+        return;
+      }
+      const { lobbyState } = multiplayer;
+      if (lobbyState.phase === "idle") {
+        if (key.name === "c") { multiplayer.createRoom(); return; }
+        if (key.name === "j") { multiplayer.startJoining(); return; }
+      }
+      if (lobbyState.phase === "joining") {
+        if (key.name === "backspace") {
+          if (lobbyState.codeInput.length > 0) {
+            multiplayer.updateCodeInput(lobbyState.codeInput.slice(0, -1));
+          }
+          return;
+        }
+        if (key.name.length === 1 && key.name >= "a" && key.name <= "z") {
+          const newCode = lobbyState.codeInput + key.name.toUpperCase();
+          if (newCode.length >= 4) {
+            multiplayer.joinRoom(newCode);
+          } else {
+            multiplayer.updateCodeInput(newCode);
+          }
+          return;
+        }
+      }
+      if (lobbyState.phase === "error") {
+        multiplayer.dismissError();
+      }
+      return;
+    }
+
     if (screen === "typing") {
       if (key.name === "tab") {
         if (session.isActive) {
+          if (multiplayerActive) return; // no restart during multiplayer race
           if (gameMode === "ai") preGenerateAIText();
           setResetKey((n) => n + 1);
         } else {
@@ -201,12 +274,17 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
         return;
       }
 
-      if (!session.isActive && !key.ctrl && !key.meta && !key.option) {
+      if (!session.isActive && !multiplayerActive && !key.ctrl && !key.meta && !key.option) {
         if (key.name === "`") {
           punctuationRef.current = !punctuationRef.current;
           setPunctuation((p) => !p);
           if (aiEnabled) flushAIBuffer();
           if (gameMode === "ai") preGenerateAIText();
+          return;
+        }
+        if (key.name === "m") {
+          setGameMode("multiplayer");
+          setScreen("lobby");
           return;
         }
         const mode = MODE_HOTKEYS[key.name];
@@ -235,6 +313,15 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
     }
 
     if (screen === "results") {
+      if (multiplayerActive) {
+        if (key.name === "n") { multiplayer.requestRematch(); return; }
+        if (key.name === "b") {
+          leaveMultiplayer();
+          return;
+        }
+        if (key.name === "q") return quit();
+        return;
+      }
       if (key.name === "n") return startNextRound();
       if (key.name === "q") return quit();
       if (key.name === "p") return goToProfile();
@@ -251,6 +338,9 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
   return (
     <box style={{ flexDirection: "column", width: "100%", height: "100%" }}>
       <box style={{ flexGrow: 1 }}>
+        {screen === "lobby" && (
+          <LobbyScreen lobbyState={multiplayer.lobbyState} playerName={playerName!} />
+        )}
         {screen === "typing" && (
           <TypingScreen
             roundNumber={roundNumber}
@@ -264,6 +354,10 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
             elapsed={stats.elapsed}
             isActive={session.isActive}
             isLoading={session.isLoading}
+            isMultiplayer={multiplayerActive}
+            playerName={playerName}
+            opponents={multiplayer.opponents}
+            raceTextLength={multiplayer.raceText?.length}
           />
         )}
         {screen === "results" && currentResult && (
@@ -273,11 +367,14 @@ export function App({ aiEnabled = false }: { aiEnabled?: boolean }) {
             whisperText={whisperText}
             isNewPbWpm={isNewPbWpm}
             isNewPbAccuracy={isNewPbAccuracy}
+            isMultiplayer={multiplayerActive}
+            raceResults={multiplayer.raceResults}
+            rematchRequested={multiplayer.rematchRequested}
           />
         )}
         {screen === "profile" && <ProfileScreen narrative={narrativeText} punctuationFilter={profileFilter} />}
       </box>
-      <StatusBar screen={screen} isTypingActive={screen === "typing" && session.isActive} aiEnabled={aiEnabled} />
+      <StatusBar screen={screen} isTypingActive={screen === "typing" && session.isActive} aiEnabled={aiEnabled} isMultiplayer={multiplayerActive} />
     </box>
   );
 }

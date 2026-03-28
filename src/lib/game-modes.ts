@@ -50,6 +50,14 @@ export const GAME_MODE_CONFIGS: Record<GameMode, GameModeConfig> = {
     updatesKb: true,
     weakKeyBias: "standard",
   },
+  multiplayer: {
+    label: "1v1",
+    targetChars: 150,
+    timeLimitMs: null,
+    savesToDb: false,
+    updatesKb: false,
+    weakKeyBias: "standard",
+  },
 };
 
 export const MODE_HOTKEYS: Record<string, GameMode> = {

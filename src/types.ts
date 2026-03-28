@@ -30,7 +30,7 @@ export interface ProblemWord {
   errors: number;
 }
 
-export type GameMode = "normal" | "timed30" | "timed60" | "warmup" | "ai";
+export type GameMode = "normal" | "timed30" | "timed60" | "warmup" | "ai" | "multiplayer";
 
 export interface RoundResult {
   roundNumber: number;
@@ -50,7 +50,33 @@ export interface RoundResult {
   timestamp: Date;
 }
 
-export type Screen = "typing" | "results" | "profile";
+export type Screen = "typing" | "results" | "profile" | "lobby";
+
+export interface OpponentState {
+  playerId: string;
+  name: string;
+  cursor: number;
+  wpm: number;
+  finished: boolean;
+  result?: { wpm: number; accuracy: number; duration: number };
+}
+
+export type LobbyState =
+  | { phase: "idle" }
+  | { phase: "creating" }
+  | { phase: "waiting"; code: string }
+  | { phase: "joining"; codeInput: string }
+  | { phase: "countdown"; code: string; value: number; players: Array<{ id: string; name: string }> }
+  | { phase: "error"; message: string };
+
+export interface RaceResult {
+  playerId: string;
+  name: string;
+  wpm: number;
+  accuracy: number;
+  duration: number;
+  rank: number;
+}
 
 export function classifyKey(char: string): string | null {
   if (char >= "A" && char <= "Z") return "Shift";

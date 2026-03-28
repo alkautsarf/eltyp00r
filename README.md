@@ -4,6 +4,7 @@ Terminal typing trainer with adaptive difficulty and AI coaching. Built with [Op
 
 ## Features
 
+- **Multiplayer** -- Real-time 1v1 racing with room codes, live opponent progress, and rematch
 - **Game modes** -- Normal, timed 30s, timed 60s, warm-up (heavy weak-key bias), and Claude (AI-generated sentences targeting your weaknesses)
 - **Adaptive word selection** -- Tracks per-key accuracy across sessions and biases word generation toward your weak keys
 - **keybr-style typing model** -- Sticky cursor that doesn't advance on errors, forcing you to hit the correct key before moving on
@@ -49,8 +50,9 @@ bun run src/index.tsx
 ## Usage
 
 ```bash
-eltyp00r            # start with AI features enabled
-eltyp00r --no-ai    # disable all AI features (no Claude auth required)
+eltyp00r                    # start with AI features enabled
+eltyp00r --no-ai            # disable all AI features (no Claude auth required)
+eltyp00r --name elpabl0     # set your multiplayer display name
 ```
 
 ## Keybindings
@@ -59,12 +61,16 @@ eltyp00r --no-ai    # disable all AI features (no Claude auth required)
 |---------|-----------|-------------------------|
 | Typing  | 1-4       | Switch mode             |
 | Typing  | 5         | Claude mode (AI)        |
+| Typing  | m         | Multiplayer lobby       |
 | Typing  | `` ` ``   | Toggle punctuation      |
 | Typing  | tab       | Go to profile / restart |
 | Typing  | esc       | Quit                    |
-| Results | n         | Next round              |
+| Lobby   | c         | Create room             |
+| Lobby   | j         | Join room               |
+| Lobby   | esc       | Back                    |
+| Results | n         | Next round / rematch    |
 | Results | q         | Quit                    |
-| Results | p         | Go to profile           |
+| Results | p / b     | Profile / back to solo  |
 | Profile | tab       | Back to typing          |
 | Profile | n         | New round               |
 | Profile | q         | Quit                    |

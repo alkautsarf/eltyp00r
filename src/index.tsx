@@ -12,5 +12,15 @@ if (process.argv.includes("--version") || process.argv.includes("-v")) {
 const noAi = process.argv.includes("--no-ai");
 const aiEnabled = !noAi && initAI();
 
+const nameIdx = process.argv.indexOf("--name");
+const playerName = nameIdx !== -1 && process.argv[nameIdx + 1]
+  ? process.argv[nameIdx + 1]
+  : `guest_${Math.random().toString(36).slice(2, 6)}`;
+
+const serverIdx = process.argv.indexOf("--server");
+const serverUrl = serverIdx !== -1 && process.argv[serverIdx + 1]
+  ? process.argv[serverIdx + 1]
+  : undefined;
+
 const renderer = await createCliRenderer({ exitOnCtrlC: false });
-createRoot(renderer).render(<App aiEnabled={aiEnabled} />);
+createRoot(renderer).render(<App aiEnabled={aiEnabled} playerName={playerName} serverUrl={serverUrl} />);

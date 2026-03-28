@@ -1,5 +1,5 @@
 import { theme } from "../theme";
-import type { TypedLine, GameMode } from "../types";
+import type { TypedLine, GameMode, OpponentState } from "../types";
 import { GAME_MODE_CONFIGS, MODE_HOTKEYS } from "../lib/game-modes";
 
 interface TypingScreenProps {
@@ -14,6 +14,10 @@ interface TypingScreenProps {
   elapsed: string;
   isActive: boolean;
   isLoading?: boolean;
+  isMultiplayer?: boolean;
+  playerName?: string;
+  opponents?: OpponentState[];
+  raceTextLength?: number;
 }
 
 export function TypingScreen({
@@ -28,6 +32,10 @@ export function TypingScreen({
   elapsed,
   isActive,
   isLoading,
+  isMultiplayer,
+  playerName,
+  opponents,
+  raceTextLength,
 }: TypingScreenProps) {
   const config = GAME_MODE_CONFIGS[gameMode];
   return (
@@ -92,8 +100,30 @@ export function TypingScreen({
         </box>
 
         <text />
-        <text />
-        <text />
+
+        {/* Race progress bars */}
+        {isMultiplayer && (
+          <box style={{ flexDirection: "column", gap: 0 }}>
+            {opponents?.map((opp) => {
+              const oppProgress = raceTextLength ? Math.round((opp.cursor / raceTextLength) * 100) : 0;
+              return (
+                <box key={opp.playerId} style={{ flexDirection: "row", height: 1, justifyContent: "center", gap: 1 }}>
+                  <text fg={theme.fgFaint}>{opp.name.padEnd(12).slice(0, 12)}</text>
+                  <ProgressBar percent={oppProgress} color={theme.orange} finished={opp.finished} />
+                  <text fg={theme.fgFaint}>{String(opp.wpm).padStart(3)} wpm</text>
+                </box>
+              );
+            })}
+            <box style={{ flexDirection: "row", height: 1, justifyContent: "center", gap: 1 }}>
+              <text fg={theme.cyan}>{(playerName || "you").padEnd(12).slice(0, 12)}</text>
+              <ProgressBar percent={progress} color={theme.green} finished={false} />
+              <text fg={theme.green}>{String(wpm).padStart(3)} wpm</text>
+            </box>
+          </box>
+        )}
+
+        {!isMultiplayer && <text />}
+        {!isMultiplayer && <text />}
 
         {/* Typing area */}
         <box style={{ flexDirection: "column", gap: 0 }}>
@@ -158,16 +188,16 @@ function TextLine({ line }: { line: TypedLine }) {
   );
 }
 
-function ProgressBar({ percent }: { percent: number }) {
-  const width = 40;
-  const filled = Math.round((width * percent) / 100);
+function ProgressBar({ percent, width = 40, color = theme.green, finished }: { percent: number; width?: number; color?: string; finished?: boolean }) {
+  const filled = Math.round((width * Math.min(percent, 100)) / 100);
   const empty = width - filled;
 
   return (
     <text>
-      <span fg={theme.green}>{"█".repeat(filled)}</span>
+      <span fg={color}>{"█".repeat(filled)}</span>
       <span fg={theme.fgDim}>{"░".repeat(empty)}</span>
-      <span fg={theme.fgFaint}> {percent.toString().padStart(3, " ")}%</span>
+      <span fg={theme.fgFaint}> {percent.toString().padStart(3)}%</span>
+      {finished && <span fg={theme.green}> ✓</span>}
     </text>
   );
 }

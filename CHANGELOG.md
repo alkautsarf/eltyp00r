@@ -4,6 +4,18 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] - 2026-03-28
+
+### Added
+
+- Real-time 1v1 multiplayer racing via WebSocket (press `m` to enter lobby)
+- Lobby screen with room creation, code-based joining, and countdown
+- Live opponent progress bars and WPM during races
+- Side-by-side race results with ranked leaderboard
+- Rematch flow after race completion
+- `--name <name>` flag to set player display name
+- `--server <url>` flag to override multiplayer server URL
+
 ## [0.4.3] - 2026-03-28
 
 ### Added
@@ -159,6 +171,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.5.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.5.0
 [0.4.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.3
 [0.4.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.2
 [0.4.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.1
