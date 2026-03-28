@@ -68,7 +68,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
   const targetTextRef = useRef("");
   const cachedKeyAccuraciesRef = useRef<KeyAccuracy[]>([]);
 
-  const initWithText = useCallback((text: string) => {
+  const initWithText = useCallback((text: string, activateImmediately?: boolean) => {
     setTargetText(text);
     targetTextRef.current = text;
     setChars(
@@ -79,16 +79,25 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
     );
     cursorRef.current = 0;
     setCursorIndex(0);
-    setIsActive(false);
     setIsComplete(false);
     setIsLoading(false);
     isCompleteRef.current = false;
-    isActiveRef.current = false;
     keystrokeLogRef.current = [];
-    roundStartTimeRef.current = 0;
     correctCountRef.current = 0;
     errorCountRef.current = 0;
     totalTypedRef.current = 0;
+
+    isActiveRef.current = false;
+    setIsActive(false);
+    roundStartTimeRef.current = 0;
+  }, []);
+
+  const startTimer = useCallback(() => {
+    if (!isActiveRef.current && !isCompleteRef.current) {
+      isActiveRef.current = true;
+      setIsActive(true);
+      roundStartTimeRef.current = Date.now();
+    }
   }, []);
 
   useEffect(() => {
@@ -99,7 +108,6 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
       if (aiText && aiText.length >= 20) {
         initWithText(aiText);
       } else {
-        // Show loading state, poll for AI text
         setIsLoading(true);
         setChars([]);
         setTargetText("");
@@ -297,6 +305,7 @@ export function useTypingSession({ roundNumber, resetKey, gameMode, punctuation,
     totalTyped: totalTypedRef.current,
     progress,
     handleKeyPress,
+    startTimer,
     roundStartTime: roundStartTimeRef.current,
     completeRound,
   };

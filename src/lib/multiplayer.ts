@@ -3,13 +3,10 @@ const DEFAULT_SERVER = "https://eltyp00r.elpabl0.xyz";
 type EventMap = {
   room_created: { code: string; playerId: string };
   lobby: { players: Array<{ id: string; name: string }> };
-  countdown: { value: number };
   race_start: { text: string };
   opponent_progress: { playerId: string; cursor: number; wpm: number };
   opponent_finish: { playerId: string; wpm: number; accuracy: number; duration: number };
   race_end: { results: Array<{ playerId: string; name: string; wpm: number; accuracy: number; duration: number; rank: number }> };
-  rematch_request: { playerId: string };
-  rematch_start: Record<string, never>;
   player_left: { playerId: string; name: string };
   error: { message: string };
   disconnected: Record<string, never>;
@@ -48,10 +45,6 @@ export class MultiplayerClient {
 
   sendFinish(wpm: number, accuracy: number, duration: number, errorCount: number, charCount: number): void {
     this.send({ type: "finish", wpm, accuracy, duration, errorCount, charCount });
-  }
-
-  sendRematch(): void {
-    this.send({ type: "rematch" });
   }
 
   leave(): void {

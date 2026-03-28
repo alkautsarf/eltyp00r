@@ -18,6 +18,7 @@ interface TypingScreenProps {
   playerName?: string;
   opponents?: OpponentState[];
   raceTextLength?: number;
+  raceCountdown?: number | null;
 }
 
 export function TypingScreen({
@@ -36,6 +37,7 @@ export function TypingScreen({
   playerName,
   opponents,
   raceTextLength,
+  raceCountdown,
 }: TypingScreenProps) {
   const config = GAME_MODE_CONFIGS[gameMode];
   return (
@@ -81,7 +83,7 @@ export function TypingScreen({
 
         {/* Mode selector — visible before typing, invisible placeholder during */}
         <box style={{ height: 1, flexDirection: "row", justifyContent: "center", gap: 2 }}>
-          {!isActive && (
+          {!isActive && !isMultiplayer && (
             <>
               {Object.entries(MODE_HOTKEYS)
                 .filter(([, mode]) => mode !== "ai" || aiEnabled)
@@ -122,8 +124,20 @@ export function TypingScreen({
           </box>
         )}
 
-        {!isMultiplayer && <text />}
-        {!isMultiplayer && <text />}
+        {isMultiplayer && raceCountdown ? (
+          <>
+            <text />
+            <text fg={theme.yellow}>
+              <b>{raceCountdown}</b>
+            </text>
+            <text />
+          </>
+        ) : (
+          <>
+            {!isMultiplayer && <text />}
+            {!isMultiplayer && <text />}
+          </>
+        )}
 
         {/* Typing area */}
         <box style={{ flexDirection: "column", gap: 0 }}>

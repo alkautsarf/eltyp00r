@@ -4,6 +4,22 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] - 2026-03-28
+
+### Fixed
+
+- Timer now starts when race text renders, not on first keypress (synchronized for both players)
+- Race ends immediately when first player finishes instead of waiting for both
+- Auto-continue to next round after 5s results display (no manual rematch needed)
+- Round number skipping from 1 to 3 on first multiplayer race
+- Mode selector showing during multiplayer countdown
+- Premature lobby-to-typing transition causing desync between players
+
+### Removed
+
+- Lobby countdown screen (countdown now displays on typing screen with text visible)
+- Manual rematch flow (replaced by auto-continue)
+
 ## [0.5.0] - 2026-03-28
 
 ### Added
@@ -171,6 +187,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.5.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.5.1
 [0.5.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.5.0
 [0.4.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.3
 [0.4.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.4.2

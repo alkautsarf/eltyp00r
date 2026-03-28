@@ -10,7 +10,6 @@ interface ResultsScreenProps {
   isNewPbAccuracy?: boolean;
   isMultiplayer?: boolean;
   raceResults?: RaceResult[] | null;
-  rematchRequested?: boolean;
 }
 
 function getHeaderText(config: { label: string; timeLimitMs: number | null }, isWarmup: boolean): string {
@@ -25,7 +24,7 @@ function getDeltaColor(delta: number): string {
   return theme.fgFaint;
 }
 
-export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, isNewPbAccuracy, isMultiplayer, raceResults, rematchRequested }: ResultsScreenProps) {
+export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, isNewPbAccuracy, isMultiplayer, raceResults }: ResultsScreenProps) {
   const config = GAME_MODE_CONFIGS[result.gameMode];
   const isWarmup = result.gameMode === "warmup";
   const delta = previousWpm !== null ? result.wpm - previousWpm : null;
@@ -134,10 +133,6 @@ export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, is
         </box>
       )}
 
-      {isMultiplayer && !raceResults && (
-        <text fg={theme.fgFaint}>Waiting for opponent to finish...</text>
-      )}
-
       {/* AI Whisper */}
       {!isMultiplayer && whisperText && (
         <box style={{ flexDirection: "row", justifyContent: "center" }}>
@@ -159,10 +154,7 @@ export function ResultsScreen({ result, previousWpm, whisperText, isNewPbWpm, is
       <text />
       {isMultiplayer ? (
         <box style={{ flexDirection: "row", gap: 3, justifyContent: "center" }}>
-          <text>
-            <span fg={theme.yellow}>[n]</span>
-            <span fg={theme.fgFaint}> rematch{rematchRequested ? " (opponent ready)" : ""}</span>
-          </text>
+          <text fg={theme.fgFaint}>Next round starting soon...</text>
           <text>
             <span fg={theme.yellow}>[b]</span>
             <span fg={theme.fgFaint}> back to solo</span>

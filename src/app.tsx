@@ -40,6 +40,7 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
   const [profileFilter, setProfileFilter] = useState<boolean | undefined>(undefined);
   const multiplayer = useMultiplayer({ playerName: playerName!, serverUrl });
   const multiplayerActive = gameMode === "multiplayer";
+  const [raceCountdown, setRaceCountdown] = useState<number | null>(null);
 
   const preGenerateAIText = useCallback(() => {
     if (!aiEnabled) return;
@@ -54,14 +55,17 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
   // Session warm-up happens via startSession() on module load in ai.ts.
   // AI text pre-generation only fires when switching to AI mode or after an AI round.
 
+  const raceTextRef = useRef<string | null>(null);
+  raceTextRef.current = multiplayer.raceText;
+
   const getInitialText = useCallback(() => {
     if (gameMode === "multiplayer") {
-      return multiplayer.raceText;
+      return raceTextRef.current;
     }
     const text = aiTextRef.current;
     aiTextRef.current = null;
     return text;
-  }, [gameMode, multiplayer.raceText]);
+  }, [gameMode]);
 
   const handleRoundComplete = useCallback((result: RoundResult) => {
     const config = GAME_MODE_CONFIGS[result.gameMode];
@@ -143,20 +147,41 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
     }
   }, [multiplayerActive, session.isActive, session.cursorIndex, stats.wpm]);
 
-  // Multiplayer: transition from countdown to typing when race starts
+  // Multiplayer: transition to typing screen when NEW race text arrives
+  // Only depends on raceText — NOT screen. If screen were a dependency,
+  // transitioning to "results" while old raceText is still set would
+  // prematurely fire this effect (before onRaceEnd clears raceText).
   useEffect(() => {
-    if (multiplayerActive && multiplayer.raceText && screen === "lobby") {
+    if (multiplayerActive && multiplayer.raceText) {
       setScreen("typing");
       setRoundNumber((n) => n + 1);
+      setRaceCountdown(3);
     }
-  }, [multiplayerActive, multiplayer.raceText, screen]);
+  }, [multiplayerActive, multiplayer.raceText]);
 
-  // Multiplayer: handle rematch start (new countdown → new race text)
+  // Multiplayer: tick the on-screen countdown
   useEffect(() => {
-    if (multiplayerActive && multiplayer.lobbyState.phase === "countdown" && screen === "results") {
-      setScreen("lobby");
+    if (raceCountdown === null || raceCountdown <= 0) return;
+    const timer = setTimeout(() => setRaceCountdown(raceCountdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [raceCountdown]);
+
+  // Multiplayer: start timer when countdown hits 0
+  useEffect(() => {
+    if (raceCountdown === 0 && multiplayerActive) {
+      session.startTimer();
+      setRaceCountdown(null);
     }
-  }, [multiplayerActive, multiplayer.lobbyState.phase, screen]);
+  }, [raceCountdown, multiplayerActive]);
+
+  // Multiplayer: when opponent finishes, force-complete local round
+  useEffect(() => {
+    if (!multiplayerActive) return;
+    const opponentFinished = multiplayer.opponents.some((o) => o.finished);
+    if (opponentFinished && session.isActive && !session.isComplete) {
+      session.completeRound();
+    }
+  }, [multiplayerActive, multiplayer.opponents, session.isActive, session.isComplete]);
 
   const startNextRound = useCallback(() => {
     if (currentResult) {
@@ -285,6 +310,7 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
         if (key.name === "m") {
           setGameMode("multiplayer");
           setScreen("lobby");
+          setRoundNumber(0);
           return;
         }
         const mode = MODE_HOTKEYS[key.name];
@@ -298,7 +324,7 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
         }
       }
 
-      if (session.isLoading) return;
+      if (session.isLoading || raceCountdown) return;
 
       if (key.name === "space") {
         session.handleKeyPress(" ");
@@ -314,7 +340,6 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
 
     if (screen === "results") {
       if (multiplayerActive) {
-        if (key.name === "n") { multiplayer.requestRematch(); return; }
         if (key.name === "b") {
           leaveMultiplayer();
           return;
@@ -358,6 +383,7 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
             playerName={playerName}
             opponents={multiplayer.opponents}
             raceTextLength={multiplayer.raceText?.length}
+            raceCountdown={raceCountdown}
           />
         )}
         {screen === "results" && currentResult && (
@@ -369,7 +395,6 @@ export function App({ aiEnabled = false, playerName = "guest", serverUrl }: { ai
             isNewPbAccuracy={isNewPbAccuracy}
             isMultiplayer={multiplayerActive}
             raceResults={multiplayer.raceResults}
-            rematchRequested={multiplayer.rematchRequested}
           />
         )}
         {screen === "profile" && <ProfileScreen narrative={narrativeText} punctuationFilter={profileFilter} />}

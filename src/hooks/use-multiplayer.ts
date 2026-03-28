@@ -13,7 +13,6 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
   const [opponents, setOpponents] = useState<OpponentState[]>([]);
   const [raceText, setRaceText] = useState<string | null>(null);
   const [raceResults, setRaceResults] = useState<RaceResult[] | null>(null);
-  const [rematchRequested, setRematchRequested] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const playerIdRef = useRef<string | null>(null);
 
@@ -40,26 +39,11 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
           .filter((p) => p.id !== playerIdRef.current)
           .map((p) => ({ playerId: p.id, name: p.name, cursor: 0, wpm: 0, finished: false }))
       );
-      // Keep lobby state updated with player list for countdown display
-      setLobbyState((prev) => {
-        if (prev.phase === "waiting") return prev;
-        if (prev.phase === "countdown") return { ...prev, players: data.players };
-        return prev;
-      });
-    };
-
-    const onCountdown = (data: { value: number }) => {
-      setLobbyState((prev) => {
-        const code = prev.phase === "waiting" ? prev.code : prev.phase === "countdown" ? prev.code : "";
-        const players = prev.phase === "countdown" ? prev.players : [];
-        return { phase: "countdown", code, value: data.value, players };
-      });
     };
 
     const onRaceStart = (data: { text: string }) => {
       setRaceText(data.text);
       setRaceResults(null);
-      setRematchRequested(false);
       setOpponents((prev) => prev.map((o) => ({ ...o, cursor: 0, wpm: 0, finished: false, result: undefined })));
     };
 
@@ -87,16 +71,8 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
 
     const onRaceEnd = (data: { results: RaceResult[] }) => {
       setRaceResults(data.results);
-    };
-
-    const onRematchRequest = () => {
-      setRematchRequested(true);
-    };
-
-    const onRematchStart = () => {
-      setRematchRequested(false);
       setRaceText(null);
-      setRaceResults(null);
+      setLobbyState({ phase: "idle" });
     };
 
     const onPlayerLeft = (data: { playerId: string; name: string }) => {
@@ -117,13 +93,10 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
 
     client.on("room_created", onRoomCreated);
     client.on("lobby", onLobby);
-    client.on("countdown", onCountdown);
     client.on("race_start", onRaceStart);
     client.on("opponent_progress", onOpponentProgress);
     client.on("opponent_finish", onOpponentFinish);
     client.on("race_end", onRaceEnd);
-    client.on("rematch_request", onRematchRequest);
-    client.on("rematch_start", onRematchStart);
     client.on("player_left", onPlayerLeft);
     client.on("error", onError);
     client.on("disconnected", onDisconnected);
@@ -131,13 +104,10 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
     return () => {
       client.off("room_created", onRoomCreated);
       client.off("lobby", onLobby);
-      client.off("countdown", onCountdown);
       client.off("race_start", onRaceStart);
       client.off("opponent_progress", onOpponentProgress);
       client.off("opponent_finish", onOpponentFinish);
       client.off("race_end", onRaceEnd);
-      client.off("rematch_request", onRematchRequest);
-      client.off("rematch_start", onRematchStart);
       client.off("player_left", onPlayerLeft);
       client.off("error", onError);
       client.off("disconnected", onDisconnected);
@@ -176,10 +146,6 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
     clientRef.current?.sendFinish(wpm, accuracy, duration, errorCount, charCount);
   }, []);
 
-  const requestRematch = useCallback(() => {
-    clientRef.current?.sendRematch();
-  }, []);
-
   const leave = useCallback(() => {
     clientRef.current?.leave();
     clientRef.current = null;
@@ -187,7 +153,6 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
     setOpponents([]);
     setRaceText(null);
     setRaceResults(null);
-    setRematchRequested(false);
     setPlayerId(null);
   }, []);
 
@@ -196,7 +161,6 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
     opponents,
     raceText,
     raceResults,
-    rematchRequested,
     playerId,
     createRoom,
     joinRoom,
@@ -205,7 +169,6 @@ export function useMultiplayer({ playerName, serverUrl }: UseMultiplayerOptions)
     dismissError,
     sendProgress,
     sendFinish,
-    requestRematch,
     leave,
   };
 }

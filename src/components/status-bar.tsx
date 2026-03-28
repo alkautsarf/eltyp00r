@@ -15,7 +15,7 @@ export function StatusBar({ screen, isTypingActive, aiEnabled, isMultiplayer }: 
       ? "esc quit"
       : `${modeRange} mode  m 1v1  \` punct  tab profile  esc quit`,
     results: isMultiplayer
-      ? "n rematch  b solo  esc quit"
+      ? "b solo  esc quit"
       : "n next  q quit  p profile",
     profile: "tab back  f filter  n new round  q quit",
     lobby: "c create  j join  esc back",

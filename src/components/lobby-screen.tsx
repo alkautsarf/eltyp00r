@@ -66,19 +66,7 @@ export function LobbyScreen({ lobbyState, playerName }: LobbyScreenProps) {
           </>
         )}
 
-        {lobbyState.phase === "countdown" && (
-          <>
-            <text fg={theme.fgFaint}>
-              {playerName}
-              <span fg={theme.fgDim}>  vs  </span>
-              {lobbyState.players.find((p) => p.name !== playerName)?.name || "opponent"}
-            </text>
-            <text />
-            <text fg={theme.yellow}>
-              <b>{lobbyState.value}</b>
-            </text>
-          </>
-        )}
+
 
         {lobbyState.phase === "error" && (
           <>

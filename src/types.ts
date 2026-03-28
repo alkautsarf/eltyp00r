@@ -66,7 +66,6 @@ export type LobbyState =
   | { phase: "creating" }
   | { phase: "waiting"; code: string }
   | { phase: "joining"; codeInput: string }
-  | { phase: "countdown"; code: string; value: number; players: Array<{ id: string; name: string }> }
   | { phase: "error"; message: string };
 
 export interface RaceResult {
