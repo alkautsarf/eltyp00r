@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { execSync } from "node:child_process";
 
-const MODEL = "claude-opus-4-6";
+const MODEL = "claude-opus-4-7";
 
 // In compiled binaries, import.meta.url points to $bunfs virtual filesystem
 // where cli.js doesn't exist. Find the system claude binary instead.
