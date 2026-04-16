@@ -33,6 +33,15 @@ jobs:
         run: |
           bun build --compile src/index.tsx --outfile eltyp00r-${{ matrix.target }}
 
+      # bun --compile emits a malformed code signature that macOS 26's stricter
+      # mach-o loader rejects with "code signature error 4" → SIGKILL on launch.
+      # Strip and re-sign adhoc so the binary loads on Tahoe.
+      - name: Fix bun --compile code signature (macOS)
+        if: contains(matrix.target, 'darwin')
+        run: |
+          codesign --remove-signature eltyp00r-${{ matrix.target }} || true
+          codesign --force --sign - eltyp00r-${{ matrix.target }}
+
       - name: Create tarball
         run: |
           TAG=${GITHUB_REF#refs/tags/}

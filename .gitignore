@@ -3,3 +3,4 @@ dist/
 bun.lock
 *.db
 eltyp00r
+.*.bun-build

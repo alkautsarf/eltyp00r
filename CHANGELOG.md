@@ -4,6 +4,12 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.4] - 2026-04-16
+
+### Fixed
+
+- Re-sign `bun --compile` binary in release CI so macOS 26 (Tahoe) loads it — bun's emitted mach-o signature is malformed and the stricter loader SIGKILLs the binary with "code signature error 4"
+
 ## [0.6.3] - 2026-04-16
 
 ### Fixed
@@ -222,6 +228,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.6.4]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.4
 [0.6.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.3
 [0.6.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.2
 [0.6.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.1
