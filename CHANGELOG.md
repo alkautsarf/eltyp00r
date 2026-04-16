@@ -4,6 +4,12 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.2] - 2026-04-16
+
+### Changed
+
+- Upgraded `@anthropic-ai/claude-agent-sdk` from `^0.2.49` to `^0.2.111`
+
 ## [0.6.1] - 2026-04-16
 
 ### Changed
@@ -210,6 +216,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.6.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.2
 [0.6.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.1
 [0.6.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.0
 [0.5.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.5.1
