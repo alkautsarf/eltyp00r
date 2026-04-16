@@ -4,6 +4,12 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.3] - 2026-04-16
+
+### Fixed
+
+- Isolated SDK session from user settings by setting `settingSources: []` on `query()` — SDK 0.2.111 changed `options.env` to overlay behavior, which caused `~/.claude/settings.json` hooks to leak into eltyp00r's SDK session
+
 ## [0.6.2] - 2026-04-16
 
 ### Changed
@@ -216,6 +222,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.6.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.3
 [0.6.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.2
 [0.6.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.1
 [0.6.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.0

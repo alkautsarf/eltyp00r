@@ -83,6 +83,7 @@ function startSession() {
       allowDangerouslySkipPermissions: true,
       effort: "low",
       persistSession: false,
+      settingSources: [],
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     },
   });
