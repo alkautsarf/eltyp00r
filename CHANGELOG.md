@@ -4,6 +4,17 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0] - 2026-05-29
+
+### Changed
+
+- Upgraded AI model from `claude-opus-4-7` to `claude-opus-4-8`
+- Upgraded `@anthropic-ai/claude-agent-sdk` from `^0.2.111` to `^0.3.156`
+
+### Added
+
+- Dynamic model resolver (`src/lib/model.ts`): the model id now resolves from `ELTYP_MODEL` (this tool only) or `S0NDER_MODEL` (shared across s0nderlabs tools), falling back to `claude-opus-4-8`, so switching models on a future release needs no code change. Env values are trimmed, so a stray-whitespace override falls through to the fallback rather than being handed to the SDK as an invalid model id.
+
 ## [0.6.4] - 2026-04-16
 
 ### Fixed
@@ -228,6 +239,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.7.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.7.0
 [0.6.4]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.4
 [0.6.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.3
 [0.6.2]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.2

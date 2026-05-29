@@ -5,8 +5,9 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { execSync } from "node:child_process";
+import { resolveModel } from "./model";
 
-const MODEL = "claude-opus-4-7";
+const MODEL = resolveModel();
 
 // In compiled binaries, import.meta.url points to $bunfs virtual filesystem
 // where cli.js doesn't exist. Find the system claude binary instead.
