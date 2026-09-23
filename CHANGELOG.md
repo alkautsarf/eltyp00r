@@ -4,6 +4,16 @@ All notable changes to eltyp00r will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.1] - 2026-09-23
+
+### Changed
+
+- Upgraded `@anthropic-ai/claude-agent-sdk` from `^0.3.156` to `0.3.280`. Its bundled Claude Code (2.1.280) knows `claude-opus-5-5` natively, so running from source on Opus 5.5 (`S0NDER_MODEL="claude-opus-5-5[1m]"`) no longer goes through a CLI that predates the model. The model resolver and its fallback are unchanged.
+
+### Fixed
+
+- The coaching session no longer loads the account's claude.ai connectors (Gmail, Drive, Calendar and others, about 105 tools and 64K tokens) into every new session. `settingSources: []` and `tools: []` did not stop the CLI from fetching them, so each session paid for tool definitions it never uses and ran them under `bypassPermissions`. The session now sets `ENABLE_CLAUDEAI_MCP_SERVERS=false`, which older system CLIs used by the compiled binary also honor.
+
 ## [0.7.0] - 2026-05-29
 
 ### Changed
@@ -239,6 +249,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tab key to toggle between typing and profile screens
 - Homebrew distribution via `brew tap alkautsarf/tap`
 
+[0.7.1]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.7.1
 [0.7.0]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.7.0
 [0.6.4]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.4
 [0.6.3]: https://github.com/alkautsarf/eltyp00r/releases/tag/v0.6.3

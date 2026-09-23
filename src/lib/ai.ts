@@ -85,6 +85,11 @@ function startSession() {
       effort: "low",
       persistSession: false,
       settingSources: [],
+      // settingSources: [] does not stop the CLI from loading the account's
+      // claude.ai connectors (~105 tools, ~64K tokens per new session). The env
+      // switch, not settings.disableClaudeAiConnectors, because the compiled
+      // binary runs the system `claude`, and an older CLI ignores that key.
+      env: { ...process.env, ENABLE_CLAUDEAI_MCP_SERVERS: "false" },
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     },
   });
