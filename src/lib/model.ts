@@ -1,12 +1,12 @@
-const FALLBACK_MODEL = "claude-opus-4-8";
+const FALLBACK_MODEL = "claude-opus-5-5";
 
 /**
  * Resolve the Claude model to use.
- * Dynamic by design: to move to a new model on a future release, set an env var
- * (no code change). Precedence:
+ * Env vars override the model per user with no code change; bumping the shipped
+ * default means editing FALLBACK_MODEL. Precedence:
  *   1. ELTYP_MODEL  (this tool only)
  *   2. S0NDER_MODEL  (shared across all s0nderlabs tools)
- *   3. FALLBACK_MODEL  (safe default, currently claude-opus-4-8)
+ *   3. FALLBACK_MODEL  (built-in safe default)
  */
 export function resolveModel(): string {
   // Trim so a stray-whitespace env value (a trailing space in a shell profile,
